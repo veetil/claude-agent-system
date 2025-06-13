@@ -8,9 +8,11 @@ Make sure you have:
 1. Claude CLI installed and configured
 2. The claude-multi-agent package installed (`pip install -e .` from the project root)
 
-## Basic Agent Runner
+## Examples Overview
 
-The `run_agent.py` script provides a simple command-line interface for running a single agent:
+### Single Agent Examples
+
+**Basic Agent Runner** (`run_agent.py`)
 
 ```bash
 # Simple prompt
@@ -32,9 +34,9 @@ python run_agent.py "What is 2+2?" --json
 - Full JSON response output
 - Session ID tracking for continuation
 
-## Session Management Example
+**Session Management** (`example_session.py`)
 
-The `example_session.py` script demonstrates session continuity:
+Demonstrates session continuity across multiple interactions:
 
 ```bash
 python example_session.py
@@ -46,19 +48,76 @@ This shows:
 3. Session ID chaining
 4. Cost tracking
 
-### Example Output:
+Shows how to:
+- Start a new conversation
+- Continue with session IDs
+- Maintain context across turns
+
+### Parallel Execution Examples
+
+**Simple Parallel Agents** (`simple_parallel.py`)
+
+Basic example of running 5 agents concurrently:
+
+```bash
+python simple_parallel.py
 ```
-=== Starting new conversation ===
-Response: I've learned the secret word: RAINBOW.
-Session ID: c7922f98-b608-448f-90c7-07361b64fc08
 
-=== Continuing conversation ===
-Response: RAINBOW
-New Session ID: 2e9bab8e-0819-458d-bb01-6657cfc47752
+Output shows all agents running simultaneously:
+```
+Launching 5 agents in parallel...
 
-=== Testing context retention ===
-Response: WOBNIAR
-Final Session ID: 62a9d066-536d-4783-afb9-43f2f4edaf89
+[Agent1] Starting...
+[Agent2] Starting...
+[Agent3] Starting...
+[Agent4] Starting...
+[Agent5] Starting...
+[Agent3] Complete!
+[Agent4] Complete!
+[Agent2] Complete!
+[Agent5] Complete!
+[Agent1] Complete!
+```
+
+**Advanced Parallel Execution** (`parallel_agents.py`)
+
+Comprehensive example with:
+- 5 different specialized agents (poet, mathematician, historian, chef, translator)
+- Timing and cost tracking
+- Workspace management
+- Session continuation
+
+```bash
+python parallel_agents.py
+```
+
+Features:
+- Each agent gets its own isolated workspace
+- Non-blocking concurrent execution
+- Detailed performance metrics
+- Example of continuing a conversation after parallel execution
+
+**Parallel Timing Demo** (`parallel_timing_demo.py`)
+
+Demonstrates the performance benefits of parallel execution:
+
+```bash
+python parallel_timing_demo.py
+```
+
+Output shows speedup comparison:
+```
+=== Performance Comparison ===
+Sequential time: 25.43s
+Parallel time: 5.21s
+Speedup: 4.9x faster
+Time saved: 20.22s
+
+=== Efficiency Analysis ===
+Number of agents: 5
+Theoretical max speedup: 5x
+Actual speedup: 4.9x
+Parallel efficiency: 98.0%
 ```
 
 ## Key Concepts
@@ -71,13 +130,57 @@ Final Session ID: 62a9d066-536d-4783-afb9-43f2f4edaf89
 
 4. **Cost Tracking**: Each response includes usage metrics and cost in USD.
 
+## Code Patterns
+
+### Running Agents in Parallel
+
+The key to parallel execution is using `asyncio`:
+
+```python
+import asyncio
+from claude_multi_agent import ShellExecutor
+
+async def run_agent(name, prompt):
+    executor = ShellExecutor()
+    result = await executor.execute_claude_async(
+        prompt=prompt,
+        working_dir=Path(f"/tmp/{name}")
+    )
+    return result
+
+async def main():
+    # Create tasks for all agents
+    tasks = [
+        run_agent("agent1", "Task 1"),
+        run_agent("agent2", "Task 2"),
+        run_agent("agent3", "Task 3")
+    ]
+    
+    # Run all concurrently (non-blocking)
+    results = await asyncio.gather(*tasks)
+    
+    # All results available here
+    for result in results:
+        print(result["result"])
+
+# Run the async main function
+asyncio.run(main())
+```
+
+### Important Notes for Parallel Execution
+
+1. **Use `execute_claude_async()`** - The async version of the executor
+2. **Each agent needs its own workspace** - Sessions are tied to directories
+3. **Use `asyncio.gather()`** - Runs all tasks concurrently
+4. **Non-blocking** - All agents run simultaneously, not sequentially
+
 ## Advanced Usage
 
 You can build on these examples to:
-- Create multiple agents with different workspaces
-- Implement conversation branching
-- Build interactive CLI tools
-- Create web services with session persistence
+- Create agent pools with different specializations
+- Implement map-reduce patterns across agents
+- Build real-time collaborative agent systems
+- Create web services with parallel agent processing
 
 ## API Reference
 
