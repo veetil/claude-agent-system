@@ -1,0 +1,79 @@
+{
+  "timestamp": "2025-06-13T14:25:19.170Z",
+  "duration": 128848,
+  "summary": {
+    "total": 6,
+    "passed": 1,
+    "failed": 5,
+    "passRate": "16.7%"
+  },
+  "environment": {
+    "node": "v18.20.7",
+    "platform": "darwin",
+    "arch": "arm64",
+    "claudeAvailable": true
+  },
+  "results": [
+    {
+      "testName": "Basic SDK Mode (-p flag)",
+      "passed": false,
+      "duration": 30006,
+      "error": "Claude process timed out",
+      "details": {
+        "errorType": "Error"
+      }
+    },
+    {
+      "testName": "Session Management",
+      "passed": false,
+      "duration": 467,
+      "error": "Initial session creation failed: error: unknown option '--session-file'\n",
+      "details": {
+        "errorType": "Error"
+      }
+    },
+    {
+      "testName": "System Prompts",
+      "passed": false,
+      "duration": 462,
+      "error": "System prompt test failed: error: unknown option '--system-prompt-file'\n",
+      "details": {
+        "errorType": "Error"
+      }
+    },
+    {
+      "testName": "04-concurrent-execution.ts",
+      "passed": false,
+      "duration": 0,
+      "error": "⨯ Unable to compile TypeScript:\n\u001b[96mtests/04-concurrent-execution.ts\u001b[0m:\u001b[93m38\u001b[0m:\u001b[93m32\u001b[0m - \u001b[91merror\u001b[0m\u001b[90m TS6133: \u001b[0m'reject' is declared but its value is never read.\n\n\u001b[7m38\u001b[0m   return new Promise((resolve, reject) => {\n\u001b[7m  \u001b[0m \u001b[91m                               ~~~~~~\u001b[0m\n\u001b[96mtests/04-concurrent-execution.ts\u001b[0m:\u001b[93m133\u001b[0m:\u001b[93m7\u001b[0m - \u001b[91merror\u001b[0m\u001b[90m TS7053: \u001b[0mElement implicitly has an 'any' type because expression of type '\"sessionFile\"' can't be used to index type '{ id: string; prompt: string; }'.\n  Property 'sessionFile' does not exist on type '{ id: string; prompt: string; }'.\n\n\u001b[7m133\u001b[0m       item['sessionFile'] = sessionFile;\n\u001b[7m   \u001b[0m \u001b[91m      ~~~~~~~~~~~~~~~~~~~\u001b[0m\n\u001b[96mtests/04-concurrent-execution.ts\u001b[0m:\u001b[93m140\u001b[0m:\u001b[93m43\u001b[0m - \u001b[91merror\u001b[0m\u001b[90m TS7053: \u001b[0mElement implicitly has an 'any' type because expression of type '\"sessionFile\"' can't be used to index type '{ id: string; prompt: string; }'.\n  Property 'sessionFile' does not exist on type '{ id: string; prompt: string; }'.\n\n\u001b[7m140\u001b[0m         spawnClaude(item.id, item.prompt, item['sessionFile'])\n\u001b[7m   \u001b[0m \u001b[91m                                          ~~~~~~~~~~~~~~~~~~~\u001b[0m\n\u001b[96mtests/04-concurrent-execution.ts\u001b[0m:\u001b[93m222\u001b[0m:\u001b[93m7\u001b[0m - \u001b[91merror\u001b[0m\u001b[90m TS7053: \u001b[0mElement implicitly has an 'any' type because expression of type '\"sessionFile\"' can't be used to index type '{ id: string; prompt1: string; prompt2: string; expected: string; }'.\n  Property 'sessionFile' does not exist on type '{ id: string; prompt1: string; prompt2: string; expected: string; }'.\n\n\u001b[7m222\u001b[0m       test['sessionFile'] = sessionFile;\n\u001b[7m   \u001b[0m \u001b[91m      ~~~~~~~~~~~~~~~~~~~\u001b[0m\n\u001b[96mtests/04-concurrent-execution.ts\u001b[0m:\u001b[93m234\u001b[0m:\u001b[93m53\u001b[0m - \u001b[91merror\u001b[0m\u001b[90m TS7053: \u001b[0mElement implicitly has an 'any' type because expression of type '\"sessionFile\"' can't be used to index type '{ id: string; prompt1: string; prompt2: string; expected: string; }'.\n  Property 'sessionFile' does not exist on type '{ id: string; prompt1: string; prompt2: string; expected: string; }'.\n\n\u001b[7m234\u001b[0m       spawnClaude(`${test.id}-query`, test.prompt2, test['sessionFile'])\n\u001b[7m   \u001b[0m \u001b[91m                                                    ~~~~~~~~~~~~~~~~~~~\u001b[0m\n"
+    },
+    {
+      "testName": "Error Handling",
+      "passed": true,
+      "duration": 97418,
+      "details": {
+        "invalidArgs": true,
+        "invalidFormat": true,
+        "nonExistentSession": true,
+        "invalidSystemPrompt": true,
+        "emptyPrompt": true,
+        "timeout": true,
+        "concurrentErrors": true,
+        "longPrompt": true,
+        "specialChars": false
+      }
+    },
+    {
+      "testName": "06-performance.ts",
+      "passed": false,
+      "duration": 0,
+      "error": "⨯ Unable to compile TypeScript:\n\u001b[96mtests/06-performance.ts\u001b[0m:\u001b[93m32\u001b[0m:\u001b[93m3\u001b[0m - \u001b[91merror\u001b[0m\u001b[90m TS6133: \u001b[0m'prompt' is declared but its value is never read.\n\n\u001b[7m32\u001b[0m   prompt?: string\n\u001b[7m  \u001b[0m \u001b[91m  ~~~~~~\u001b[0m\n"
+    }
+  ],
+  "recommendations": [
+    "Verify Claude CLI is properly installed and the -p flag is supported",
+    "Check session file permissions and --continue/--resume flag support",
+    "Ensure system prompt files are readable and properly formatted",
+    "Critical: Multiple test failures indicate fundamental compatibility issues"
+  ]
+}
