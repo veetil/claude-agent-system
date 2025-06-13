@@ -18,6 +18,9 @@ from .core.exceptions import (
 # Shell executor
 from .shell.executor import ShellExecutor
 
+# Workspace manager
+from .workspace.manager import WorkspaceManager
+
 # Utilities
 from .utils.logging import setup_logging, get_logger
 from .utils.retry import retry_with_backoff
@@ -37,6 +40,9 @@ __all__ = [
     
     # Shell executor
     "ShellExecutor",
+    
+    # Workspace manager
+    "WorkspaceManager",
     
     # Utilities
     "setup_logging", "get_logger", "retry_with_backoff", "RobustJSONParser",

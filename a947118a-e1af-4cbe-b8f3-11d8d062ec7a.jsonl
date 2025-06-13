@@ -1,0 +1,28 @@
+{"type":"summary","summary":"Color Preference Shared: Blue Discussed",
+"leafUuid":"2cefc660-7540-46c4-8562-422df33de83c"}
+{"parentUuid":null,"isSidechain":false,"userType":"external","cwd":"/Users/mi/Projects/claude-sdk",
+"sessionId":"a947118a-e1af-4cbe-b8f3-11d8d062ec7a","version":"1.0.22","type":"user",
+"message":{"role":"user","content":"my fav color is blue"},"uuid":"d92d60dc-a3e3-4fe0-9333-b846066b5b36",
+"timestamp":"2025-06-13T16:20:41.462Z"}
+{"parentUuid":"d92d60dc-a3e3-4fe0-9333-b846066b5b36","isSidechain":false,"userType":"external",
+"cwd":"/Users/mi/Projects/claude-sdk","sessionId":"a947118a-e1af-4cbe-b8f3-11d8d062ec7a",
+"version":"1.0.22","type":"assistant","message":{"id":"msg_01K1ExhQbuPPsMkQbqmQbER8","type":"message","
+role":"assistant","model":"claude-opus-4-20250514","content":[{"type":"text",
+"text":"Noted! Your favorite color is blue. 💙"}],"stop_reason":null,"stop_sequence":null,
+"usage":{"input_tokens":4,"cache_creation_input_tokens":13659,"cache_read_input_tokens":0,
+"output_tokens":10,"service_tier":"standard"}},"uuid":"1b69bd3d-0f97-49a1-82e5-e14105691846",
+"timestamp":"2025-06-13T16:20:41.462Z"}
+{"parentUuid":"1b69bd3d-0f97-49a1-82e5-e14105691846","isSidechain":false,"userType":"external",
+"cwd":"/Users/mi/Projects/claude-sdk","sessionId":"a947118a-e1af-4cbe-b8f3-11d8d062ec7a",
+"version":"1.0.22","type":"user","message":{"role":"user","content":"my fav car is honda"},
+"uuid":"44254558-bcc6-4934-89fd-b9f41fcc0238","timestamp":"2025-06-13T16:20:41.464Z"}
+{"parentUuid":"44254558-bcc6-4934-89fd-b9f41fcc0238","isSidechain":false,"userType":"external",
+"cwd":"/Users/mi/Projects/claude-sdk","sessionId":"a947118a-e1af-4cbe-b8f3-11d8d062ec7a",
+"version":"1.0.22","message":{"id":"msg_018TbMygAGFt8Zquki8maHYK","type":"message","role":"assistant",
+"model":"claude-opus-4-20250514","content":[{"type":"text","text":"Got it! Honda is your favorite car."}],
+"stop_reason":null,"stop_sequence":null,"usage":{"input_tokens":4,"cache_creation_input_tokens":24,
+"cache_read_input_tokens":13659,"output_tokens":1,"service_tier":"standard"}},
+"requestId":"req_011CQ6XSfUoVtf4MSMiypuzr","type":"assistant","uuid":"2275c2f0-583f-4546-a1f4-48e6e42adbdb",
+"timestamp":"2025-06-13T16:20:44.820Z"}
+{"type":"summary","summary":"Claude Code SDK: Async Errors, JSON Parsing, Permissions",
+"leafUuid":"38295163-1a48-4847-9adc-df163deba1f5"}

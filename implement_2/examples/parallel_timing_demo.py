@@ -51,7 +51,11 @@ async def run_sequential():
     
     total_time = time.time() - start
     print(f"Sequential total time: {total_time:.2f}s\n")
-    
+    print("*********\nResults\n")
+    for r in results:
+        print(r)
+    print("*********\nEnd Results\n")
+
     return results, total_time
 
 
@@ -76,6 +80,9 @@ async def run_parallel():
     
     for result in results:
         print(f"  {result['name']} completed in {result['duration']:.2f}s")
+        print("Result\n")
+        print(result)
+        print("End Result\n\n")
     
     print(f"Parallel total time: {total_time:.2f}s\n")
     

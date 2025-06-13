@@ -10,6 +10,35 @@ Make sure you have:
 
 ## Examples Overview
 
+### Workspace Management Examples
+
+**Basic Workspace Example** (`workspace_example.py`)
+
+Shows how to create isolated workspaces with files and folders:
+
+```bash
+python workspace_example.py
+```
+
+Features:
+- Creating workspaces with file and folder mappings
+- Running Claude in an isolated environment
+- Workspace cleanup and lifecycle management
+
+**Git Workspace Example** (`workspace_git_example.py`)
+
+Demonstrates workspace creation with cloned repositories:
+
+```bash
+python workspace_git_example.py
+```
+
+Features:
+- Cloning GitHub repositories into workspaces
+- Combining local files with cloned repos
+- Persistent workspaces for long-running tasks
+- Cost tracking across sessions
+
 ### Single Agent Examples
 
 **Basic Agent Runner** (`run_agent.py`)
