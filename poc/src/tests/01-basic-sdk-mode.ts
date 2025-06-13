@@ -1,7 +1,7 @@
-import { spawn } from 'child_process';
+import { ClaudeWrapper } from '../utils/claude-wrapper';
 
 /**
- * POC Test 01: Basic SDK Mode (-p flag)
+ * POC Test 01: Basic SDK Mode (--print flag)
  * 
  * Validates that Claude CLI can be launched in SDK/print mode
  * and returns machine-readable JSON output.
@@ -18,88 +18,36 @@ interface TestResult {
 
 async function runTest(): Promise<TestResult> {
   const startTime = Date.now();
-  const testName = 'Basic SDK Mode (-p flag)';
+  const testName = 'Basic SDK Mode (--print flag)';
   
   try {
     console.log(`\n=== Running ${testName} ===`);
     
-    // Test 1: Launch Claude with -p flag and simple prompt
-    const result1 = await new Promise<{ stdout: string; stderr: string; exitCode: number }>((resolve, reject) => {
-      let stdout = '';
-      let stderr = '';
-      
-      // Ensure ANTHROPIC_API_KEY is not set
-      const env = { ...process.env };
-      delete env.ANTHROPIC_API_KEY;
-      
-      const claude = spawn('claude', [
-        '-p',
-        '--output-format', 'json',
-        'Say "Hello from SDK mode" and nothing else'
-      ], { 
-        env,
-        shell: true 
-      });
-      
-      claude.stdout.on('data', (data) => {
-        stdout += data.toString();
-      });
-      
-      claude.stderr.on('data', (data) => {
-        stderr += data.toString();
-      });
-      
-      claude.on('close', (code) => {
-        resolve({ stdout, stderr, exitCode: code || 0 });
-      });
-      
-      claude.on('error', (err) => {
-        reject(err);
-      });
-      
-      // Timeout after 30 seconds
-      setTimeout(() => {
-        claude.kill();
-        reject(new Error('Claude process timed out'));
-      }, 30000);
+    // Create wrapper instance
+    const claude = new ClaudeWrapper({
+      outputFormat: 'json',
+      timeout: 30000
     });
     
-    console.log('Exit code:', result1.exitCode);
-    console.log('Stdout length:', result1.stdout.length);
-    console.log('Stderr length:', result1.stderr.length);
+    // Test 1: Launch Claude with --print flag and simple prompt
+    console.log('\nTest 1: Basic print mode with JSON output...');
+    const response1 = await claude.execute('Say "Hello from SDK mode" and nothing else');
     
-    // Validate result
-    if (result1.exitCode !== 0) {
-      throw new Error(`Claude exited with code ${result1.exitCode}: ${result1.stderr}`);
+    console.log('Success:', response1.success);
+    console.log('Result:', response1.result);
+    console.log('Session ID:', response1.sessionId);
+    
+    // Validate response
+    if (!response1.success) {
+      throw new Error(`Claude execution failed: ${response1.error}`);
     }
     
-    // Parse JSON output
-    let parsedOutput: any;
-    try {
-      // The output might have multiple JSON objects, try to find the main response
-      const jsonMatch = result1.stdout.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No JSON found in output');
-      }
-      parsedOutput = JSON.parse(jsonMatch[0]);
-    } catch (e) {
-      console.error('Failed to parse JSON:', e);
-      console.error('Raw output:', result1.stdout);
-      throw new Error(`Failed to parse JSON output: ${e}`);
-    }
+    // Test 2: Verify we got a result
+    const hasResult = !!response1.result;
+    const hasSessionId = !!response1.sessionId;
     
-    // Test 2: Verify JSON structure
-    const hasExpectedFields = 
-      parsedOutput.hasOwnProperty('result') || 
-      parsedOutput.hasOwnProperty('content') ||
-      parsedOutput.hasOwnProperty('response');
-    
-    if (!hasExpectedFields) {
-      throw new Error('JSON output missing expected fields');
-    }
-    
-    // Test 3: Check for response content
-    const responseText = parsedOutput.result || parsedOutput.content || parsedOutput.response || '';
+    // Test 3: Check response content
+    const responseText = response1.result || '';
     const containsExpectedText = responseText.toLowerCase().includes('hello') && 
                                 responseText.toLowerCase().includes('sdk');
     
@@ -108,65 +56,50 @@ async function runTest(): Promise<TestResult> {
     }
     
     // Test 4: Multiple prompts in sequence
-    console.log('\nTesting sequential prompts...');
+    console.log('\nTest 4: Testing sequential prompts...');
     const prompts = [
       'What is 2+2? Reply with just the number.',
       'What color is the sky? Reply with just one word.',
       'Is TypeScript a programming language? Reply with just yes or no.'
     ];
     
-    const sequentialResults = [];
-    for (const prompt of prompts) {
-      const result = await new Promise<{ stdout: string; exitCode: number }>((resolve, reject) => {
-        let stdout = '';
-        
-        const env = { ...process.env };
-        delete env.ANTHROPIC_API_KEY;
-        
-        const claude = spawn('claude', [
-          '-p',
-          '--output-format', 'json',
-          prompt
-        ], { 
-          env,
-          shell: true 
-        });
-        
-        claude.stdout.on('data', (data) => {
-          stdout += data.toString();
-        });
-        
-        claude.on('close', (code) => {
-          resolve({ stdout, exitCode: code || 0 });
-        });
-        
-        setTimeout(() => {
-          claude.kill();
-          reject(new Error('Timeout'));
-        }, 30000);
-      });
-      
-      if (result.exitCode === 0) {
-        sequentialResults.push({ prompt, success: true });
-      } else {
-        sequentialResults.push({ prompt, success: false });
-      }
-    }
+    const sequentialResults = await claude.executeSequence(prompts);
     
     const allSequentialPassed = sequentialResults.every(r => r.success);
     console.log(`Sequential tests: ${sequentialResults.filter(r => r.success).length}/${sequentialResults.length} passed`);
     
+    // Test 5: Test metadata collection
+    console.log('\nTest 5: Testing metadata collection...');
+    const hasMetadata = response1.metadata && 
+                       typeof response1.metadata.duration === 'number' &&
+                       response1.metadata.exitCode === 0;
+    
+    const hasUsageData = response1.metadata?.usage && 
+                        typeof response1.metadata.usage.input_tokens === 'number';
+    
+    console.log('Has metadata:', hasMetadata);
+    console.log('Has usage data:', hasUsageData);
+    
     return {
       testName,
-      passed: hasExpectedFields && allSequentialPassed,
+      passed: response1.success && hasResult && hasSessionId && allSequentialPassed,
       duration: Date.now() - startTime,
-      output: JSON.stringify(parsedOutput, null, 2),
+      output: JSON.stringify({
+        result: response1.result,
+        sessionId: response1.sessionId,
+        cost: response1.metadata?.cost
+      }, null, 2),
       details: {
-        jsonParsed: true,
-        hasExpectedFields,
+        hasResult,
+        hasSessionId,
         containsExpectedText,
-        sequentialResults,
-        outputStructure: Object.keys(parsedOutput)
+        sequentialResults: sequentialResults.map(r => ({
+          success: r.success,
+          result: r.result?.substring(0, 50)
+        })),
+        hasMetadata,
+        hasUsageData,
+        tokensUsed: response1.metadata?.usage
       }
     };
     

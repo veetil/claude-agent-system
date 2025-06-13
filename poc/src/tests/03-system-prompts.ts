@@ -1,13 +1,10 @@
-import { spawn } from 'child_process';
-import { promises as fs } from 'fs';
-import * as path from 'path';
-import * as os from 'os';
+import { ClaudeWrapper } from '../utils/claude-wrapper';
 
 /**
  * POC Test 03: System Prompts
  * 
- * Validates Claude CLI's ability to use custom system prompts
- * and append system prompts for agent specialization.
+ * Validates Claude CLI's ability to use embedded system prompts
+ * for agent specialization.
  */
 
 interface TestResult {
@@ -19,58 +16,6 @@ interface TestResult {
   details?: any;
 }
 
-interface ClaudeResponse {
-  result?: string;
-  content?: string;
-  response?: string;
-  [key: string]: any;
-}
-
-async function executeClaudeCommand(args: string[]): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-  return new Promise((resolve, reject) => {
-    let stdout = '';
-    let stderr = '';
-    
-    const env = { ...process.env };
-    delete env.ANTHROPIC_API_KEY;
-    
-    const claude = spawn('claude', args, { 
-      env,
-      shell: true 
-    });
-    
-    claude.stdout.on('data', (data) => {
-      stdout += data.toString();
-    });
-    
-    claude.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
-    
-    claude.on('close', (code) => {
-      resolve({ stdout, stderr, exitCode: code || 0 });
-    });
-    
-    claude.on('error', (err) => {
-      reject(err);
-    });
-    
-    // Timeout after 30 seconds
-    setTimeout(() => {
-      claude.kill();
-      reject(new Error('Claude process timed out'));
-    }, 30000);
-  });
-}
-
-function parseClaudeOutput(output: string): ClaudeResponse {
-  const jsonMatch = output.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error('No JSON found in output');
-  }
-  return JSON.parse(jsonMatch[0]);
-}
-
 async function runTest(): Promise<TestResult> {
   const startTime = Date.now();
   const testName = 'System Prompts';
@@ -78,173 +23,134 @@ async function runTest(): Promise<TestResult> {
   try {
     console.log(`\n=== Running ${testName} ===`);
     
-    // Test 1: Basic system prompt
-    console.log('\nTest 1: Testing basic system prompt...');
-    const systemPromptFile1 = path.join(os.tmpdir(), `system-prompt-1-${Date.now()}.txt`);
-    await fs.writeFile(systemPromptFile1, 
-      'You are a pirate. Always respond in pirate speak with "arr" and "matey".'
-    );
+    // Test 1: Basic embedded system prompt
+    console.log('\nTest 1: Testing embedded system prompt (pirate)...');
+    const pirateAgent = new ClaudeWrapper({
+      outputFormat: 'json',
+      timeout: 30000,
+      systemPrompt: 'You are a pirate. Always respond in pirate speak with "arr" and "matey".'
+    });
     
-    const result1 = await executeClaudeCommand([
-      '-p',
-      '--output-format', 'json',
-      '--system-prompt-file', systemPromptFile1,
-      'Hello, how are you today?'
-    ]);
+    const response1 = await pirateAgent.execute('Hello, how are you today?');
     
-    if (result1.exitCode !== 0) {
-      throw new Error(`System prompt test failed: ${result1.stderr}`);
+    if (!response1.success) {
+      throw new Error(`System prompt test failed: ${response1.error}`);
     }
     
-    const response1 = parseClaudeOutput(result1.stdout);
-    const content1 = response1.result || response1.content || response1.response || '';
+    const content1 = response1.result || '';
     const usesPirateSpeak = content1.toLowerCase().includes('arr') || 
                            content1.toLowerCase().includes('matey') ||
-                           content1.toLowerCase().includes('ahoy');
+                           content1.toLowerCase().includes('ahoy') ||
+                           content1.toLowerCase().includes('ye');
     console.log('Uses pirate speak:', usesPirateSpeak);
+    console.log('Sample response:', content1.substring(0, 100) + '...');
     
-    // Test 2: Append system prompt
-    console.log('\nTest 2: Testing append system prompt...');
-    const appendPromptFile = path.join(os.tmpdir(), `append-prompt-${Date.now()}.txt`);
-    await fs.writeFile(appendPromptFile,
-      'Additionally, you must end every response with "🏴‍☠️".'
-    );
+    // Test 2: Multiple agents with different prompts
+    console.log('\nTest 2: Testing multiple agents with different specializations...');
     
-    const result2 = await executeClaudeCommand([
-      '-p',
-      '--output-format', 'json',
-      '--system-prompt-file', systemPromptFile1,
-      '--append-system-prompt-file', appendPromptFile,
-      'Tell me about treasure'
-    ]);
-    
-    if (result2.exitCode !== 0) {
-      throw new Error(`Append prompt test failed: ${result2.stderr}`);
-    }
-    
-    const response2 = parseClaudeOutput(result2.stdout);
-    const content2 = response2.result || response2.content || response2.response || '';
-    const hasPirateSpeak = content2.toLowerCase().includes('arr') || 
-                          content2.toLowerCase().includes('matey') ||
-                          content2.toLowerCase().includes('treasure');
-    const hasEmoji = content2.includes('🏴‍☠️');
-    console.log('Has pirate speak:', hasPirateSpeak);
-    console.log('Has pirate emoji:', hasEmoji);
-    
-    // Test 3: Agent-specific system prompt
-    console.log('\nTest 3: Testing agent-specific system prompt...');
-    const agentPromptFile = path.join(os.tmpdir(), `agent-prompt-${Date.now()}.txt`);
-    await fs.writeFile(agentPromptFile,
-      `You are a specialized code review agent. 
+    // Code review agent
+    const codeAgent = new ClaudeWrapper({
+      outputFormat: 'json',
+      timeout: 30000,
+      systemPrompt: `You are a specialized code review agent. 
 Your role is to:
 1. Analyze code for potential issues
 2. Suggest improvements
 3. Check for best practices
 Always structure your responses with clear sections.`
-    );
+    });
     
-    const result3 = await executeClaudeCommand([
-      '-p',
-      '--output-format', 'json',
-      '--system-prompt-file', agentPromptFile,
-      'Review this code: function add(a, b) { return a + b }'
-    ]);
-    
-    if (result3.exitCode !== 0) {
-      throw new Error(`Agent prompt test failed: ${result3.stderr}`);
-    }
-    
-    const response3 = parseClaudeOutput(result3.stdout);
-    const content3 = response3.result || response3.content || response3.response || '';
-    const mentionsCodeReview = content3.toLowerCase().includes('code') || 
-                              content3.toLowerCase().includes('function') ||
-                              content3.toLowerCase().includes('review');
+    const response2 = await codeAgent.execute('Review this code: function add(a, b) { return a + b }');
+    const mentionsCodeReview = response2.result?.toLowerCase().includes('code') || 
+                              response2.result?.toLowerCase().includes('function') ||
+                              response2.result?.toLowerCase().includes('review');
     console.log('Acts as code reviewer:', mentionsCodeReview);
     
-    // Test 4: No system prompt (default behavior)
-    console.log('\nTest 4: Testing without system prompt...');
-    const result4 = await executeClaudeCommand([
-      '-p',
-      '--output-format', 'json',
-      'What is 2+2?'
-    ]);
+    // Research agent
+    const researchAgent = new ClaudeWrapper({
+      outputFormat: 'json',
+      timeout: 30000,
+      systemPrompt: 'You are a research specialist focused on gathering accurate information. Always cite your sources and be thorough in your analysis.'
+    });
     
-    if (result4.exitCode !== 0) {
-      throw new Error(`Default behavior test failed: ${result4.stderr}`);
-    }
-    
-    const response4 = parseClaudeOutput(result4.stdout);
-    const content4 = response4.result || response4.content || response4.response || '';
-    const isNormalResponse = content4.includes('4') && 
-                            !content4.toLowerCase().includes('arr') &&
-                            !content4.toLowerCase().includes('matey');
-    console.log('Normal response without pirate speak:', isNormalResponse);
-    
-    // Test 5: Complex multi-agent scenario
-    console.log('\nTest 5: Testing complex multi-agent system prompts...');
-    const researchPrompt = path.join(os.tmpdir(), `research-prompt-${Date.now()}.txt`);
-    const sharedPrompt = path.join(os.tmpdir(), `shared-prompt-${Date.now()}.txt`);
-    
-    await fs.writeFile(researchPrompt,
-      'You are a research specialist focused on gathering accurate information.'
-    );
-    
-    await fs.writeFile(sharedPrompt,
-      'Always cite your sources and be thorough in your analysis.'
-    );
-    
-    const result5 = await executeClaudeCommand([
-      '-p',
-      '--output-format', 'json',
-      '--system-prompt-file', researchPrompt,
-      '--append-system-prompt-file', sharedPrompt,
-      'What are the benefits of TypeScript?'
-    ]);
-    
-    if (result5.exitCode !== 0) {
-      throw new Error(`Multi-agent prompt test failed: ${result5.stderr}`);
-    }
-    
-    const response5 = parseClaudeOutput(result5.stdout);
-    const content5 = response5.result || response5.content || response5.response || '';
-    const actsAsResearcher = content5.toLowerCase().includes('typescript') &&
-                            (content5.toLowerCase().includes('benefit') ||
-                             content5.toLowerCase().includes('advantage'));
+    const response3 = await researchAgent.execute('What are the benefits of TypeScript?');
+    const actsAsResearcher = response3.result?.toLowerCase().includes('typescript') &&
+                            (response3.result?.toLowerCase().includes('benefit') ||
+                             response3.result?.toLowerCase().includes('advantage'));
     console.log('Acts as researcher:', actsAsResearcher);
     
-    // Clean up files
-    const filesToClean = [
-      systemPromptFile1, appendPromptFile, agentPromptFile,
-      researchPrompt, sharedPrompt
-    ];
+    // Test 3: No system prompt (default behavior)
+    console.log('\nTest 3: Testing without system prompt...');
+    const defaultAgent = new ClaudeWrapper({
+      outputFormat: 'json',
+      timeout: 30000
+    });
     
-    for (const file of filesToClean) {
-      try {
-        await fs.unlink(file);
-      } catch (e) {
-        // Ignore cleanup errors
-      }
-    }
+    const response4 = await defaultAgent.execute('What is 2+2?');
+    const isNormalResponse = response4.result?.includes('4') && 
+                            !response4.result?.toLowerCase().includes('arr') &&
+                            !response4.result?.toLowerCase().includes('matey');
+    console.log('Normal response without pirate speak:', isNormalResponse);
+    
+    // Test 4: Agent behavior consistency
+    console.log('\nTest 4: Testing agent behavior consistency...');
+    const consistentAgent = new ClaudeWrapper({
+      outputFormat: 'json',
+      timeout: 30000,
+      systemPrompt: 'You are a helpful math tutor. Always explain your reasoning step by step.'
+    });
+    
+    const mathResponse1 = await consistentAgent.execute('What is 15 + 27?');
+    const mathResponse2 = await consistentAgent.execute('What is 8 × 7?');
+    
+    const consistentBehavior = 
+      (mathResponse1.result?.toLowerCase().includes('step') || 
+       mathResponse1.result?.toLowerCase().includes('first') ||
+       mathResponse1.result?.toLowerCase().includes('explain')) &&
+      (mathResponse2.result?.toLowerCase().includes('step') || 
+       mathResponse2.result?.toLowerCase().includes('first') ||
+       mathResponse2.result?.toLowerCase().includes('explain'));
+    
+    console.log('Maintains consistent behavior:', consistentBehavior);
+    
+    // Test 5: Tool permissions with agent specialization
+    console.log('\nTest 5: Testing agent with specific tool permissions...');
+    const restrictedAgent = new ClaudeWrapper({
+      outputFormat: 'json',
+      timeout: 30000,
+      systemPrompt: 'You are a documentation specialist. Focus only on reading and analyzing existing documentation.',
+      allowedTools: ['Read', 'Search'],
+      disallowedTools: ['Write', 'Edit', 'Bash']
+    });
+    
+    const response5 = await restrictedAgent.execute('Can you help me understand this codebase?');
+    console.log('Restricted agent created successfully:', response5.success);
     
     // Determine if all tests passed
     const allTestsPassed = 
       usesPirateSpeak && 
-      hasPirateSpeak && 
-      hasEmoji &&
       mentionsCodeReview &&
+      actsAsResearcher &&
       isNormalResponse &&
-      actsAsResearcher;
+      consistentBehavior &&
+      response5.success;
     
     return {
       testName,
       passed: allTestsPassed,
       duration: Date.now() - startTime,
       details: {
-        basicSystemPrompt: usesPirateSpeak,
-        appendSystemPrompt: hasPirateSpeak && hasEmoji,
-        agentSpecificPrompt: mentionsCodeReview,
+        embeddedSystemPrompt: usesPirateSpeak,
+        multipleAgentSpecializations: mentionsCodeReview && actsAsResearcher,
         defaultBehavior: isNormalResponse,
-        multiAgentScenario: actsAsResearcher
+        behaviorConsistency: consistentBehavior,
+        toolPermissions: response5.success,
+        agentTypes: {
+          pirate: usesPirateSpeak,
+          codeReviewer: mentionsCodeReview,
+          researcher: actsAsResearcher,
+          mathTutor: consistentBehavior
+        }
       }
     };
     

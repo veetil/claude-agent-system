@@ -1,11 +1,11 @@
 {
-  "timestamp": "2025-06-13T14:25:19.170Z",
-  "duration": 128848,
+  "timestamp": "2025-06-13T14:52:27.976Z",
+  "duration": 240808,
   "summary": {
     "total": 6,
-    "passed": 1,
-    "failed": 5,
-    "passRate": "16.7%"
+    "passed": 0,
+    "failed": 6,
+    "passRate": "0.0%"
   },
   "environment": {
     "node": "v18.20.7",
@@ -15,65 +15,184 @@
   },
   "results": [
     {
-      "testName": "Basic SDK Mode (-p flag)",
+      "testName": "Basic SDK Mode (--print flag)",
       "passed": false,
-      "duration": 30006,
-      "error": "Claude process timed out",
+      "duration": 12203,
+      "output": "{\n  \"result\": \"Hello from SDK mode\",\n  \"sessionId\": \"4ed49e15-0e72-45bb-a772-4d1e4bc16257\"\n}...",
       "details": {
-        "errorType": "Error"
+        "hasResult": true,
+        "hasSessionId": true,
+        "containsExpectedText": true,
+        "sequentialResults": [
+          {
+            "success": true,
+            "result": "4"
+          },
+          {
+            "success": false,
+            "result": ""
+          },
+          {
+            "success": false,
+            "result": ""
+          }
+        ],
+        "hasMetadata": true,
+        "hasUsageData": true,
+        "tokensUsed": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 305,
+          "cache_read_input_tokens": 13605,
+          "output_tokens": 14,
+          "server_tool_use": {
+            "web_search_requests": 0
+          }
+        }
       }
     },
     {
       "testName": "Session Management",
       "passed": false,
-      "duration": 467,
-      "error": "Initial session creation failed: error: unknown option '--session-file'\n",
+      "duration": 16402,
       "details": {
-        "errorType": "Error"
+        "sessionCreated": true,
+        "firstSessionWorks": false,
+        "newSessionCreated": true,
+        "sessionIsolation": true,
+        "continueLastWorks": true,
+        "sessionIds": {
+          "first": "1c12f79e-7ac3-4ba5-8be3-44ea8af45cbf",
+          "second": "9612ae05-26d4-481b-8f2c-eecbb8f9319e",
+          "areDifferent": true
+        }
       }
     },
     {
       "testName": "System Prompts",
       "passed": false,
-      "duration": 462,
-      "error": "System prompt test failed: error: unknown option '--system-prompt-file'\n",
+      "duration": 77994,
       "details": {
-        "errorType": "Error"
+        "embeddedSystemPrompt": true,
+        "multipleAgentSpecializations": true,
+        "defaultBehavior": true,
+        "behaviorConsistency": true,
+        "toolPermissions": false,
+        "agentTypes": {
+          "pirate": true,
+          "codeReviewer": true,
+          "researcher": true,
+          "mathTutor": true
+        }
       }
     },
     {
-      "testName": "04-concurrent-execution.ts",
+      "testName": "Concurrent Execution",
       "passed": false,
-      "duration": 0,
-      "error": "⨯ Unable to compile TypeScript:\n\u001b[96mtests/04-concurrent-execution.ts\u001b[0m:\u001b[93m38\u001b[0m:\u001b[93m32\u001b[0m - \u001b[91merror\u001b[0m\u001b[90m TS6133: \u001b[0m'reject' is declared but its value is never read.\n\n\u001b[7m38\u001b[0m   return new Promise((resolve, reject) => {\n\u001b[7m  \u001b[0m \u001b[91m                               ~~~~~~\u001b[0m\n\u001b[96mtests/04-concurrent-execution.ts\u001b[0m:\u001b[93m133\u001b[0m:\u001b[93m7\u001b[0m - \u001b[91merror\u001b[0m\u001b[90m TS7053: \u001b[0mElement implicitly has an 'any' type because expression of type '\"sessionFile\"' can't be used to index type '{ id: string; prompt: string; }'.\n  Property 'sessionFile' does not exist on type '{ id: string; prompt: string; }'.\n\n\u001b[7m133\u001b[0m       item['sessionFile'] = sessionFile;\n\u001b[7m   \u001b[0m \u001b[91m      ~~~~~~~~~~~~~~~~~~~\u001b[0m\n\u001b[96mtests/04-concurrent-execution.ts\u001b[0m:\u001b[93m140\u001b[0m:\u001b[93m43\u001b[0m - \u001b[91merror\u001b[0m\u001b[90m TS7053: \u001b[0mElement implicitly has an 'any' type because expression of type '\"sessionFile\"' can't be used to index type '{ id: string; prompt: string; }'.\n  Property 'sessionFile' does not exist on type '{ id: string; prompt: string; }'.\n\n\u001b[7m140\u001b[0m         spawnClaude(item.id, item.prompt, item['sessionFile'])\n\u001b[7m   \u001b[0m \u001b[91m                                          ~~~~~~~~~~~~~~~~~~~\u001b[0m\n\u001b[96mtests/04-concurrent-execution.ts\u001b[0m:\u001b[93m222\u001b[0m:\u001b[93m7\u001b[0m - \u001b[91merror\u001b[0m\u001b[90m TS7053: \u001b[0mElement implicitly has an 'any' type because expression of type '\"sessionFile\"' can't be used to index type '{ id: string; prompt1: string; prompt2: string; expected: string; }'.\n  Property 'sessionFile' does not exist on type '{ id: string; prompt1: string; prompt2: string; expected: string; }'.\n\n\u001b[7m222\u001b[0m       test['sessionFile'] = sessionFile;\n\u001b[7m   \u001b[0m \u001b[91m      ~~~~~~~~~~~~~~~~~~~\u001b[0m\n\u001b[96mtests/04-concurrent-execution.ts\u001b[0m:\u001b[93m234\u001b[0m:\u001b[93m53\u001b[0m - \u001b[91merror\u001b[0m\u001b[90m TS7053: \u001b[0mElement implicitly has an 'any' type because expression of type '\"sessionFile\"' can't be used to index type '{ id: string; prompt1: string; prompt2: string; expected: string; }'.\n  Property 'sessionFile' does not exist on type '{ id: string; prompt1: string; prompt2: string; expected: string; }'.\n\n\u001b[7m234\u001b[0m       spawnClaude(`${test.id}-query`, test.prompt2, test['sessionFile'])\n\u001b[7m   \u001b[0m \u001b[91m                                                    ~~~~~~~~~~~~~~~~~~~\u001b[0m\n"
+      "duration": 31212,
+      "details": {
+        "concurrentSuccess": "5/5",
+        "outputsCorrect": false,
+        "stressTestSuccess": "10/10",
+        "sessionIsolation": false,
+        "avgInstanceDuration": 5131,
+        "totalConcurrentTime": 5811,
+        "stressTestTime": 8286,
+        "specializedAgents": true
+      }
     },
     {
       "testName": "Error Handling",
-      "passed": true,
-      "duration": 97418,
+      "passed": false,
+      "duration": 15478,
       "details": {
         "invalidArgs": true,
         "invalidFormat": true,
         "nonExistentSession": true,
-        "invalidSystemPrompt": true,
         "emptyPrompt": true,
         "timeout": true,
+        "recovery": false,
         "concurrentErrors": true,
         "longPrompt": true,
-        "specialChars": false
+        "specialChars": true,
+        "malformedResponse": true
       }
     },
     {
-      "testName": "06-performance.ts",
+      "testName": "Performance Testing",
       "passed": false,
-      "duration": 0,
-      "error": "⨯ Unable to compile TypeScript:\n\u001b[96mtests/06-performance.ts\u001b[0m:\u001b[93m32\u001b[0m:\u001b[93m3\u001b[0m - \u001b[91merror\u001b[0m\u001b[90m TS6133: \u001b[0m'prompt' is declared but its value is never read.\n\n\u001b[7m32\u001b[0m   prompt?: string\n\u001b[7m  \u001b[0m \u001b[91m  ~~~~~~\u001b[0m\n"
+      "duration": 87048,
+      "details": {
+        "avgTotalTime": "5012.00",
+        "avgResponseTime": "5012.00",
+        "promptSizeMetrics": [
+          {
+            "size": "small",
+            "promptLength": 10,
+            "responseTime": 5114,
+            "tokenCount": 22
+          },
+          {
+            "size": "medium",
+            "promptLength": 52,
+            "responseTime": 4825,
+            "tokenCount": 53
+          },
+          {
+            "size": "large",
+            "promptLength": 44,
+            "responseTime": 4937,
+            "tokenCount": 25
+          },
+          {
+            "size": "xlarge",
+            "promptLength": 466,
+            "responseTime": 4627,
+            "tokenCount": 24
+          }
+        ],
+        "sessionOverhead": {
+          "newSession": 9571,
+          "continueSession": 562,
+          "faster": true
+        },
+        "concurrentResults": [
+          {
+            "count": 1,
+            "duration": 4838,
+            "avgTimePerRequest": 4838,
+            "successRate": 100
+          },
+          {
+            "count": 3,
+            "duration": 4846,
+            "avgTimePerRequest": 1615.3333333333333,
+            "successRate": 100
+          },
+          {
+            "count": 5,
+            "duration": 5020,
+            "avgTimePerRequest": 1004,
+            "successRate": 100
+          }
+        ],
+        "memoryDelta": "0.13",
+        "throughput": "0.23",
+        "performanceCriteria": {
+          "startupTime": true,
+          "responseScaling": true,
+          "sessionWorks": false,
+          "concurrentScaling": true,
+          "stressTest": true
+        }
+      }
     }
   ],
   "recommendations": [
-    "Verify Claude CLI is properly installed and the -p flag is supported",
     "Check session file permissions and --continue/--resume flag support",
     "Ensure system prompt files are readable and properly formatted",
+    "Consider implementing connection pooling or rate limiting for concurrent operations",
+    "Implement robust error recovery mechanisms in the agent system",
+    "Monitor and optimize Claude CLI startup time and response latency",
     "Critical: Multiple test failures indicate fundamental compatibility issues"
   ]
 }

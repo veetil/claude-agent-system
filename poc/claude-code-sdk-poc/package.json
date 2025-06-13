@@ -1,0 +1,16 @@
+{
+  "name": "claude-code-sdk-poc",
+  "version": "1.0.0",
+  "description": "POC for Claude Code SDK multi-agent system",
+  "main": "index.js",
+  "scripts": {
+    "test": "ts-node test-claude-code-sdk.ts",
+    "test:all": "ts-node run-all-tests.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-code": "latest",
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.0",
+    "@types/node": "^20.0.0"
+  }
+}

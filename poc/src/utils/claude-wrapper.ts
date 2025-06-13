@@ -4,23 +4,22 @@ import { EventEmitter } from 'events';
 /**
  * Claude CLI Wrapper Utility
  * 
- * Provides a simplified interface for interacting with Claude CLI
- * in SDK mode with proper error handling and session management.
+ * Updated to work with actual Claude CLI behavior:
+ * - Uses stdin/stdout for communication
+ * - Tracks session IDs from responses
+ * - Embeds system prompts in messages
  */
 
 export interface ClaudeOptions {
-  outputFormat?: 'json' | 'text';
-  sessionFile?: string;
-  systemPrompt?: string;
-  systemPromptFile?: string;
-  appendSystemPrompt?: string;
-  appendSystemPromptFile?: string;
-  maxTurns?: number;
-  maxTokens?: number;
-  temperature?: number;
-  workingDirectory?: string;
-  env?: Record<string, string>;
+  outputFormat?: 'text' | 'json' | 'stream-json';
+  sessionId?: string;
+  continueLastSession?: boolean;
+  model?: string;
+  allowedTools?: string[];
+  disallowedTools?: string[];
+  addDirs?: string[];
   timeout?: number;
+  systemPrompt?: string; // Will be embedded in the message
 }
 
 export interface ClaudeResponse {
@@ -33,11 +32,31 @@ export interface ClaudeResponse {
     exitCode: number;
     stdout: string;
     stderr: string;
+    cost?: number;
+    usage?: {
+      input_tokens: number;
+      output_tokens: number;
+    };
+  };
+}
+
+interface RawClaudeResponse {
+  type: string;
+  subtype: string;
+  is_error: boolean;
+  result?: string;
+  session_id?: string;
+  total_cost_usd?: number;
+  duration_ms?: number;
+  usage?: {
+    input_tokens: number;
+    output_tokens: number;
   };
 }
 
 export class ClaudeWrapper extends EventEmitter {
   private defaultTimeout = 30000;
+  private sessionIds: Map<string, string> = new Map();
   
   constructor(private defaultOptions?: ClaudeOptions) {
     super();
@@ -50,13 +69,59 @@ export class ClaudeWrapper extends EventEmitter {
     const startTime = Date.now();
     const opts = { ...this.defaultOptions, ...options };
     
+    // Embed system prompt if provided
+    const finalPrompt = opts.systemPrompt 
+      ? `${opts.systemPrompt}\n\n${prompt}`
+      : prompt;
+    
     try {
-      const args = this.buildArgs(prompt, opts);
-      const result = await this.runCommand(args, opts);
+      const args = this.buildArgs(opts);
+      const result = await this.runCommand(finalPrompt, args, opts);
       
+      // Parse response if JSON format
+      if (opts.outputFormat === 'json') {
+        try {
+          const parsed = JSON.parse(result.stdout) as RawClaudeResponse;
+          
+          // Store session ID if present
+          if (parsed.session_id) {
+            this.sessionIds.set('last', parsed.session_id);
+          }
+          
+          return {
+            success: !parsed.is_error,
+            result: parsed.result,
+            sessionId: parsed.session_id,
+            error: parsed.is_error ? result.stderr : undefined,
+            metadata: {
+              duration: Date.now() - startTime,
+              exitCode: result.exitCode,
+              stdout: result.stdout,
+              stderr: result.stderr,
+              cost: parsed.total_cost_usd,
+              usage: parsed.usage
+            }
+          };
+        } catch (e) {
+          // If JSON parsing fails, return raw output
+          return {
+            success: result.exitCode === 0,
+            result: result.stdout,
+            error: result.exitCode !== 0 ? result.stderr : undefined,
+            metadata: {
+              duration: Date.now() - startTime,
+              exitCode: result.exitCode,
+              stdout: result.stdout,
+              stderr: result.stderr
+            }
+          };
+        }
+      }
+      
+      // For non-JSON output
       return {
         success: result.exitCode === 0,
-        result: this.parseOutput(result.stdout, opts.outputFormat),
+        result: result.stdout,
         error: result.exitCode !== 0 ? result.stderr : undefined,
         metadata: {
           duration: Date.now() - startTime,
@@ -84,29 +149,56 @@ export class ClaudeWrapper extends EventEmitter {
     initialPrompt: string,
     options?: ClaudeOptions
   ): Promise<{ sessionId: string; response: ClaudeResponse }> {
-    const sessionFile = options?.sessionFile || `/tmp/claude-session-${Date.now()}.json`;
     const response = await this.execute(initialPrompt, {
       ...options,
-      sessionFile
+      outputFormat: 'json' // Force JSON to get session ID
     });
     
+    const sessionId = response.sessionId || 'unknown';
+    if (sessionId !== 'unknown') {
+      this.sessionIds.set(sessionId, sessionId);
+      this.sessionIds.set('last', sessionId);
+    }
+    
     return {
-      sessionId: sessionFile,
+      sessionId,
       response
     };
   }
   
   /**
    * Continue an existing session
+   * Note: This returns a new session ID that must be used for subsequent calls
    */
   async continueSession(
     sessionId: string,
     prompt: string,
     options?: ClaudeOptions
   ): Promise<ClaudeResponse> {
+    const response = await this.execute(prompt, {
+      ...options,
+      sessionId
+    });
+    
+    // Update our stored session ID if we got a new one
+    if (response.sessionId && response.success) {
+      this.sessionIds.set(sessionId, response.sessionId);
+      this.sessionIds.set('last', response.sessionId);
+    }
+    
+    return response;
+  }
+  
+  /**
+   * Continue the last session
+   */
+  async continueLastSession(
+    prompt: string,
+    options?: ClaudeOptions
+  ): Promise<ClaudeResponse> {
     return this.execute(prompt, {
       ...options,
-      sessionFile: sessionId
+      continueLastSession: true
     });
   }
   
@@ -118,12 +210,25 @@ export class ClaudeWrapper extends EventEmitter {
     options?: ClaudeOptions
   ): Promise<ClaudeResponse[]> {
     const results: ClaudeResponse[] = [];
-    const { sessionId } = await this.createSession(prompts[0], options);
     
-    results.push(await this.continueSession(sessionId, prompts[0], options));
+    // First prompt creates the session
+    const first = await this.execute(prompts[0], {
+      ...options,
+      outputFormat: 'json'
+    });
+    results.push(first);
     
+    // Get session ID from first response
+    const sessionId = first.sessionId;
+    
+    // Continue with subsequent prompts
     for (let i = 1; i < prompts.length; i++) {
-      results.push(await this.continueSession(sessionId, prompts[i], options));
+      const result = await this.execute(prompts[i], {
+        ...options,
+        sessionId,
+        outputFormat: 'json'
+      });
+      results.push(result);
     }
     
     return results;
@@ -147,53 +252,45 @@ export class ClaudeWrapper extends EventEmitter {
   }
   
   /**
+   * Get the last session ID
+   */
+  getLastSessionId(): string | undefined {
+    return this.sessionIds.get('last');
+  }
+  
+  /**
    * Build command line arguments from options
    */
-  private buildArgs(prompt: string, options: ClaudeOptions): string[] {
-    const args: string[] = ['-p']; // SDK mode
+  private buildArgs(options: ClaudeOptions): string[] {
+    const args: string[] = ['--print']; // Always use print mode for SDK
     
     if (options.outputFormat) {
       args.push('--output-format', options.outputFormat);
     }
     
-    if (options.sessionFile) {
-      // Check if this is a continuation or new session
-      if (prompt !== '') {
-        args.push('--continue');
-      }
-      args.push('--session-file', options.sessionFile);
+    if (options.sessionId) {
+      args.push('-r', options.sessionId);
+    } else if (options.continueLastSession) {
+      args.push('-c');
     }
     
-    if (options.systemPrompt) {
-      args.push('--system-prompt', options.systemPrompt);
+    if (options.model) {
+      args.push('--model', options.model);
     }
     
-    if (options.systemPromptFile) {
-      args.push('--system-prompt-file', options.systemPromptFile);
+    if (options.allowedTools && options.allowedTools.length > 0) {
+      args.push('--allowedTools', options.allowedTools.join(','));
     }
     
-    if (options.appendSystemPrompt) {
-      args.push('--append-system-prompt', options.appendSystemPrompt);
+    if (options.disallowedTools && options.disallowedTools.length > 0) {
+      args.push('--disallowedTools', options.disallowedTools.join(','));
     }
     
-    if (options.appendSystemPromptFile) {
-      args.push('--append-system-prompt-file', options.appendSystemPromptFile);
+    if (options.addDirs && options.addDirs.length > 0) {
+      options.addDirs.forEach(dir => {
+        args.push('--add-dir', dir);
+      });
     }
-    
-    if (options.maxTurns !== undefined) {
-      args.push('--max-turns', options.maxTurns.toString());
-    }
-    
-    if (options.maxTokens !== undefined) {
-      args.push('--max-tokens', options.maxTokens.toString());
-    }
-    
-    if (options.temperature !== undefined) {
-      args.push('--temperature', options.temperature.toString());
-    }
-    
-    // Add the prompt last
-    args.push(prompt);
     
     return args;
   }
@@ -202,6 +299,7 @@ export class ClaudeWrapper extends EventEmitter {
    * Run the Claude command and capture output
    */
   private runCommand(
+    prompt: string,
     args: string[],
     options: ClaudeOptions
   ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
@@ -210,19 +308,13 @@ export class ClaudeWrapper extends EventEmitter {
       let stderr = '';
       
       // Prepare environment
-      const env = { ...process.env, ...options.env };
-      delete env.ANTHROPIC_API_KEY; // Required for this setup
+      const env = { ...process.env };
+      // Don't delete ANTHROPIC_API_KEY - it might be needed for session storage
       
-      const spawnOptions: any = {
+      const claude = spawn('claude', args, {
         env,
-        shell: true
-      };
-      
-      if (options.workingDirectory) {
-        spawnOptions.cwd = options.workingDirectory;
-      }
-      
-      const claude = spawn('claude', args, spawnOptions);
+        shell: false
+      });
       
       // Emit process started event
       this.emit('processStarted', { pid: claude.pid, args });
@@ -249,6 +341,10 @@ export class ClaudeWrapper extends EventEmitter {
         reject(err);
       });
       
+      // Send prompt via stdin
+      claude.stdin.write(prompt);
+      claude.stdin.end();
+      
       // Handle timeout
       const timeout = options.timeout || this.defaultTimeout;
       const timer = setTimeout(() => {
@@ -259,27 +355,6 @@ export class ClaudeWrapper extends EventEmitter {
       // Clear timeout if process ends normally
       claude.on('exit', () => clearTimeout(timer));
     });
-  }
-  
-  /**
-   * Parse output based on format
-   */
-  private parseOutput(output: string, format?: string): any {
-    if (format === 'json') {
-      try {
-        // Find JSON in output
-        const jsonMatch = output.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          return parsed.result || parsed.content || parsed.response || parsed;
-        }
-      } catch (e) {
-        // If JSON parsing fails, return raw output
-        return output;
-      }
-    }
-    
-    return output;
   }
 }
 

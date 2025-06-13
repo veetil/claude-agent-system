@@ -1,0 +1,35 @@
+{
+  "timestamp": "2025-06-13 08:42:48",
+  "results": [
+    {
+      "name": "Basic Interaction",
+      "passed": false,
+      "error": null
+    },
+    {
+      "name": "System Prompts",
+      "passed": false,
+      "error": null
+    },
+    {
+      "name": "Multi-turn Conversation",
+      "passed": false,
+      "error": null
+    },
+    {
+      "name": "Concurrent Agents",
+      "passed": false,
+      "error": null
+    },
+    {
+      "name": "Session Continuation",
+      "passed": false,
+      "error": null
+    }
+  ],
+  "summary": {
+    "total": 5,
+    "passed": 0,
+    "failed": 5
+  }
+}

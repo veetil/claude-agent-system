@@ -1,0 +1,36 @@
+{
+  "timestamp": "2025-06-13 08:49:17",
+  "results": [
+    {
+      "name": "Basic Functionality",
+      "passed": false,
+      "error": null
+    },
+    {
+      "name": "Agent Specialization",
+      "passed": true,
+      "error": null
+    },
+    {
+      "name": "Concurrent Agents",
+      "passed": false,
+      "error": null
+    },
+    {
+      "name": "Multi-turn Conversation",
+      "passed": false,
+      "error": null
+    },
+    {
+      "name": "Code Generation Quality",
+      "passed": false,
+      "error": null
+    }
+  ],
+  "summary": {
+    "total": 5,
+    "passed": 1,
+    "failed": 4,
+    "success_rate": "20.0%"
+  }
+}

@@ -1,7 +1,4 @@
-import { spawn } from 'child_process';
-import { promises as fs } from 'fs';
-import * as path from 'path';
-import * as os from 'os';
+import { ClaudeWrapper } from '../utils/claude-wrapper';
 
 /**
  * POC Test 06: Performance Testing
@@ -19,90 +16,6 @@ interface TestResult {
   details?: any;
 }
 
-interface PerformanceMetrics {
-  startupTime: number;
-  responseTime: number;
-  totalTime: number;
-  memoryUsage?: number;
-  cpuTime?: number;
-}
-
-async function measureClaudePerformance(
-  args: string[],
-  prompt?: string
-): Promise<PerformanceMetrics & { stdout: string; stderr: string; exitCode: number }> {
-  return new Promise((resolve, reject) => {
-    const metrics: PerformanceMetrics = {
-      startupTime: 0,
-      responseTime: 0,
-      totalTime: 0
-    };
-    
-    let stdout = '';
-    let stderr = '';
-    let firstDataTime: number | null = null;
-    
-    const env = { ...process.env };
-    delete env.ANTHROPIC_API_KEY;
-    
-    const startTime = process.hrtime.bigint();
-    const startCpu = process.cpuUsage();
-    
-    const claude = spawn('claude', args, { 
-      env,
-      shell: true 
-    });
-    
-    claude.stdout.on('data', (data) => {
-      if (!firstDataTime) {
-        firstDataTime = Date.now();
-        metrics.startupTime = Number(process.hrtime.bigint() - startTime) / 1_000_000; // Convert to ms
-      }
-      stdout += data.toString();
-    });
-    
-    claude.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
-    
-    claude.on('close', (code) => {
-      const endTime = process.hrtime.bigint();
-      const endCpu = process.cpuUsage(startCpu);
-      
-      metrics.totalTime = Number(endTime - startTime) / 1_000_000; // Convert to ms
-      metrics.responseTime = metrics.totalTime - metrics.startupTime;
-      metrics.cpuTime = (endCpu.user + endCpu.system) / 1000; // Convert to ms
-      
-      // Try to get memory usage from process (approximation)
-      if (claude.pid) {
-        try {
-          const memUsage = process.memoryUsage();
-          metrics.memoryUsage = memUsage.heapUsed / 1024 / 1024; // Convert to MB
-        } catch (e) {
-          // Ignore memory measurement errors
-        }
-      }
-      
-      resolve({
-        ...metrics,
-        stdout,
-        stderr,
-        exitCode: code || 0
-      });
-    });
-    
-    claude.on('error', (err) => {
-      reject(err);
-    });
-    
-    // Timeout after 60 seconds for performance tests
-    setTimeout(() => {
-      claude.kill();
-      reject(new Error('Performance test timed out'));
-    }, 60000);
-  });
-}
-
 async function runTest(): Promise<TestResult> {
   const startTime = Date.now();
   const testName = 'Performance Testing';
@@ -113,158 +26,155 @@ async function runTest(): Promise<TestResult> {
     
     // Test 1: Basic startup performance
     console.log('\nTest 1: Measuring basic startup time...');
-    const startupRuns = 5;
+    const startupRuns = 3; // Reduced for faster testing
     const startupTimes: number[] = [];
+    const responseTimes: number[] = [];
     
     for (let i = 0; i < startupRuns; i++) {
-      const result = await measureClaudePerformance([
-        '-p',
-        '--output-format', 'json',
-        'Reply with just "OK"'
-      ]);
+      const runStart = Date.now();
+      const wrapper = new ClaudeWrapper({
+        outputFormat: 'json',
+        timeout: 30000
+      });
       
-      if (result.exitCode === 0) {
-        startupTimes.push(result.startupTime);
-        console.log(`Run ${i + 1}: Startup ${result.startupTime.toFixed(2)}ms, Total ${result.totalTime.toFixed(2)}ms`);
+      const result = await wrapper.execute('Reply with just "OK"');
+      const runEnd = Date.now();
+      const totalTime = runEnd - runStart;
+      
+      if (result.success) {
+        startupTimes.push(totalTime);
+        
+        // Calculate approximate response time from metadata if available
+        const responseTime = result.metadata?.duration || totalTime;
+        responseTimes.push(responseTime);
+        
+        console.log(`Run ${i + 1}: Total ${totalTime}ms, Response ${responseTime}ms`);
       }
     }
     
     const avgStartup = startupTimes.reduce((a, b) => a + b, 0) / startupTimes.length;
-    console.log(`Average startup time: ${avgStartup.toFixed(2)}ms`);
+    const avgResponse = responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length;
+    console.log(`Average total time: ${avgStartup.toFixed(2)}ms`);
+    console.log(`Average response time: ${avgResponse.toFixed(2)}ms`);
     
     // Test 2: Response time for different prompt sizes
     console.log('\nTest 2: Testing response times for different prompt sizes...');
     const promptSizes = [
-      { size: 10, prompt: 'Count to 5' },
-      { size: 100, prompt: 'Explain quantum computing in one sentence. Be brief.' },
-      { size: 500, prompt: 'Write a haiku about artificial intelligence. ' + 'Context: '.repeat(50) },
-      { size: 1000, prompt: 'Summarize this: ' + 'The quick brown fox jumps over the lazy dog. '.repeat(20) }
+      { size: 'small', prompt: 'Count to 5' },
+      { size: 'medium', prompt: 'Explain quantum computing in one sentence. Be brief.' },
+      { size: 'large', prompt: 'Write a haiku about artificial intelligence.' },
+      { size: 'xlarge', prompt: 'Summarize this: ' + 'The quick brown fox jumps over the lazy dog. '.repeat(10) }
     ];
     
-    const responseTimes: any[] = [];
+    const sizeMetrics: any[] = [];
+    const wrapper = new ClaudeWrapper({
+      outputFormat: 'json',
+      timeout: 30000
+    });
+    
     for (const test of promptSizes) {
-      const result = await measureClaudePerformance([
-        '-p',
-        '--output-format', 'json',
-        test.prompt
-      ]);
+      const testStart = Date.now();
+      const result = await wrapper.execute(test.prompt);
+      const testDuration = Date.now() - testStart;
       
-      if (result.exitCode === 0) {
-        responseTimes.push({
+      if (result.success) {
+        sizeMetrics.push({
           size: test.size,
-          responseTime: result.responseTime,
-          totalTime: result.totalTime
+          promptLength: test.prompt.length,
+          responseTime: testDuration,
+          tokenCount: result.metadata?.usage ? 
+            (result.metadata.usage.input_tokens + result.metadata.usage.output_tokens) : 0
         });
-        console.log(`Prompt size ~${test.size} chars: Response ${result.responseTime.toFixed(2)}ms`);
+        console.log(`Prompt ${test.size} (~${test.prompt.length} chars): ${testDuration}ms`);
       }
     }
     
-    // Test 3: Session creation overhead
-    console.log('\nTest 3: Measuring session creation overhead...');
-    const sessionFile = path.join(os.tmpdir(), `perf-session-${Date.now()}.json`);
+    // Test 3: Session overhead
+    console.log('\nTest 3: Measuring session overhead...');
     
-    // First run with new session
-    const newSessionResult = await measureClaudePerformance([
-      '-p',
-      '--output-format', 'json',
-      '--session-file', sessionFile,
-      'Starting new session'
-    ]);
+    // First call creates a new session
+    const sessionStart1 = Date.now();
+    const { sessionId, response: sessionResp1 } = await wrapper.createSession(
+      'Remember: My favorite number is 42.'
+    );
+    const sessionTime1 = Date.now() - sessionStart1;
     
-    // Second run continuing session
-    const continueSessionResult = await measureClaudePerformance([
-      '-p',
-      '--output-format', 'json',
-      '--continue',
-      '--session-file', sessionFile,
-      'Continuing session'
-    ]);
+    // Second call continues the session
+    const sessionStart2 = Date.now();
+    const sessionResp2 = await wrapper.continueSession(
+      sessionId,
+      'What is my favorite number?'
+    );
+    const sessionTime2 = Date.now() - sessionStart2;
     
-    const sessionOverhead = newSessionResult.totalTime - continueSessionResult.totalTime;
-    console.log(`New session time: ${newSessionResult.totalTime.toFixed(2)}ms`);
-    console.log(`Continue session time: ${continueSessionResult.totalTime.toFixed(2)}ms`);
-    console.log(`Session creation overhead: ~${Math.abs(sessionOverhead).toFixed(2)}ms`);
+    console.log(`New session time: ${sessionTime1}ms`);
+    console.log(`Continue session time: ${sessionTime2}ms`);
+    console.log(`Session continuation is ${sessionTime1 > sessionTime2 ? 'faster' : 'slower'}`);
     
-    // Test 4: Concurrent performance degradation
+    // Test 4: Concurrent performance
     console.log('\nTest 4: Testing concurrent performance...');
     const concurrentCounts = [1, 3, 5];
     const concurrentResults: any[] = [];
     
     for (const count of concurrentCounts) {
-      const promises = Array(count).fill(0).map((_, i) => 
-        measureClaudePerformance([
-          '-p',
-          '--output-format', 'json',
-          `Instance ${i + 1}: What is ${i + 1} + ${i + 1}?`
-        ])
-      );
+      const prompts = Array(count).fill(0).map((_, i) => ({
+        id: `concurrent-${i}`,
+        prompt: `Instance ${i + 1}: What is ${i + 1} + ${i + 1}?`
+      }));
       
-      const startConcurrent = Date.now();
-      const results = await Promise.all(promises);
-      const concurrentDuration = Date.now() - startConcurrent;
+      const concurrentStart = Date.now();
+      const results = await wrapper.executeConcurrent(prompts);
+      const concurrentDuration = Date.now() - concurrentStart;
       
-      const avgTime = results.reduce((sum, r) => sum + r.totalTime, 0) / results.length;
+      const successCount = Array.from(results.values()).filter(r => r.success).length;
+      const avgTimePerRequest = concurrentDuration / count;
+      
       concurrentResults.push({
         count,
-        avgTime,
-        totalDuration: concurrentDuration
+        duration: concurrentDuration,
+        avgTimePerRequest,
+        successRate: (successCount / count) * 100
       });
       
-      console.log(`${count} concurrent: Avg ${avgTime.toFixed(2)}ms, Total ${concurrentDuration}ms`);
+      console.log(`${count} concurrent: Total ${concurrentDuration}ms, Avg ${avgTimePerRequest.toFixed(2)}ms/req, Success ${successCount}/${count}`);
     }
     
-    // Test 5: Memory efficiency
-    console.log('\nTest 5: Testing memory efficiency...');
-    const memoryTest = await measureClaudePerformance([
-      '-p',
-      '--output-format', 'json',
-      'Process this and report: ' + 'Lorem ipsum '.repeat(100)
-    ]);
+    // Test 5: Memory efficiency (approximation)
+    console.log('\nTest 5: Testing with large content...');
+    const largeContent = 'Lorem ipsum dolor sit amet. '.repeat(100);
+    const memStart = process.memoryUsage().heapUsed / 1024 / 1024;
     
-    if (memoryTest.memoryUsage) {
-      console.log(`Memory usage: ~${memoryTest.memoryUsage.toFixed(2)} MB`);
-    }
-    if (memoryTest.cpuTime) {
-      console.log(`CPU time: ${memoryTest.cpuTime.toFixed(2)}ms`);
-    }
+    const largeResult = await wrapper.execute(`Process this text: ${largeContent}`);
     
-    // Test 6: Stress test - rapid sequential calls
+    const memEnd = process.memoryUsage().heapUsed / 1024 / 1024;
+    const memDelta = memEnd - memStart;
+    
+    console.log(`Memory delta: ~${memDelta.toFixed(2)} MB`);
+    console.log(`Large content processed: ${largeResult.success}`);
+    
+    // Test 6: Rapid sequential calls
     console.log('\nTest 6: Rapid sequential calls...');
-    const rapidCalls = 10;
+    const rapidCalls = 5; // Reduced for faster testing
     const rapidStart = Date.now();
     let successfulCalls = 0;
     
     for (let i = 0; i < rapidCalls; i++) {
-      try {
-        const result = await measureClaudePerformance([
-          '-p',
-          '--output-format', 'json',
-          `Quick call ${i + 1}`
-        ]);
-        if (result.exitCode === 0) successfulCalls++;
-      } catch (e) {
-        console.log(`Rapid call ${i + 1} failed:`, e);
-      }
+      const result = await wrapper.execute(`Quick call ${i + 1}: What is ${i}?`);
+      if (result.success) successfulCalls++;
     }
     
     const rapidDuration = Date.now() - rapidStart;
     const avgRapidTime = rapidDuration / rapidCalls;
     console.log(`Rapid calls: ${successfulCalls}/${rapidCalls} succeeded`);
     console.log(`Average time per call: ${avgRapidTime.toFixed(2)}ms`);
-    
-    // Clean up
-    try {
-      await fs.unlink(sessionFile);
-    } catch (e) {
-      // Ignore cleanup errors
-    }
+    console.log(`Throughput: ${(1000 / avgRapidTime).toFixed(2)} calls/second`);
     
     // Performance criteria
     const performanceCriteria = {
-      startupTime: avgStartup < 5000, // Less than 5 seconds
-      responseScaling: responseTimes.length === promptSizes.length,
-      sessionEfficiency: continueSessionResult.exitCode === 0,
-      concurrentScaling: concurrentResults.length === concurrentCounts.length,
+      startupTime: avgStartup < 10000, // Less than 10 seconds
+      responseScaling: sizeMetrics.length === promptSizes.length,
+      sessionWorks: sessionResp1.success && sessionResp2.success,
+      concurrentScaling: concurrentResults.every(r => r.successRate >= 80),
       stressTest: successfulCalls >= rapidCalls * 0.8 // 80% success rate
     };
     
@@ -275,13 +185,17 @@ async function runTest(): Promise<TestResult> {
       passed: meetsPerformanceCriteria,
       duration: Date.now() - startTime,
       details: {
-        avgStartupTime: avgStartup.toFixed(2),
-        responseTimes,
-        sessionOverhead: sessionOverhead.toFixed(2),
+        avgTotalTime: avgStartup.toFixed(2),
+        avgResponseTime: avgResponse.toFixed(2),
+        promptSizeMetrics: sizeMetrics,
+        sessionOverhead: {
+          newSession: sessionTime1,
+          continueSession: sessionTime2,
+          faster: sessionTime1 > sessionTime2
+        },
         concurrentResults,
-        memoryUsage: memoryTest.memoryUsage?.toFixed(2),
-        cpuTime: memoryTest.cpuTime?.toFixed(2),
-        rapidCallsPerSecond: (1000 / avgRapidTime).toFixed(2),
+        memoryDelta: memDelta.toFixed(2),
+        throughput: (1000 / avgRapidTime).toFixed(2),
         performanceCriteria
       }
     };

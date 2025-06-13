@@ -1,7 +1,4 @@
-import { spawn } from 'child_process';
-import { promises as fs } from 'fs';
-import * as path from 'path';
-import * as os from 'os';
+import { ClaudeWrapper } from '../utils/claude-wrapper';
 
 /**
  * POC Test 04: Concurrent Execution
@@ -19,98 +16,9 @@ interface TestResult {
   details?: any;
 }
 
-interface ClaudeInstance {
-  id: string;
-  sessionFile: string;
-  process?: any;
-  output: string;
-  error: string;
-  exitCode?: number;
-  startTime: number;
-  endTime?: number;
-}
-
-async function spawnClaude(
-  id: string, 
-  prompt: string, 
-  sessionFile: string
-): Promise<ClaudeInstance> {
-  return new Promise((resolve, reject) => {
-    const instance: ClaudeInstance = {
-      id,
-      sessionFile,
-      output: '',
-      error: '',
-      startTime: Date.now()
-    };
-    
-    const env = { ...process.env };
-    delete env.ANTHROPIC_API_KEY;
-    
-    const args = [
-      '-p',
-      '--output-format', 'json',
-      '--session-file', sessionFile,
-      prompt
-    ];
-    
-    const claude = spawn('claude', args, { 
-      env,
-      shell: true 
-    });
-    
-    instance.process = claude;
-    
-    claude.stdout.on('data', (data) => {
-      instance.output += data.toString();
-    });
-    
-    claude.stderr.on('data', (data) => {
-      instance.error += data.toString();
-    });
-    
-    claude.on('close', (code) => {
-      instance.exitCode = code || 0;
-      instance.endTime = Date.now();
-      resolve(instance);
-    });
-    
-    claude.on('error', (err) => {
-      instance.error = err.message;
-      instance.exitCode = 1;
-      instance.endTime = Date.now();
-      resolve(instance);
-    });
-    
-    // Timeout after 45 seconds
-    setTimeout(() => {
-      if (!instance.endTime) {
-        claude.kill();
-        instance.error = 'Process timed out';
-        instance.exitCode = -1;
-        instance.endTime = Date.now();
-        resolve(instance);
-      }
-    }, 45000);
-  });
-}
-
-function parseOutput(output: string): any {
-  try {
-    const jsonMatch = output.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      return null;
-    }
-    return JSON.parse(jsonMatch[0]);
-  } catch (e) {
-    return null;
-  }
-}
-
 async function runTest(): Promise<TestResult> {
   const startTime = Date.now();
   const testName = 'Concurrent Execution';
-  const sessionFiles: string[] = [];
   
   try {
     console.log(`\n=== Running ${testName} ===`);
@@ -126,52 +34,46 @@ async function runTest(): Promise<TestResult> {
       { id: 'agent-5', prompt: 'You are Agent 5. Calculate 25 + 25. Reply with just the number.' }
     ];
     
-    // Create session files
-    for (const item of concurrentPrompts) {
-      const sessionFile = path.join(os.tmpdir(), `claude-concurrent-${item.id}-${Date.now()}.json`);
-      sessionFiles.push(sessionFile);
-      item['sessionFile'] = sessionFile;
-    }
+    const wrapper = new ClaudeWrapper({
+      outputFormat: 'json',
+      timeout: 30000
+    });
     
     // Launch all instances concurrently
     const launchTime = Date.now();
-    const instances = await Promise.all(
-      concurrentPrompts.map(item => 
-        spawnClaude(item.id, item.prompt, item['sessionFile'])
-      )
-    );
+    const results = await wrapper.executeConcurrent(concurrentPrompts);
     const totalLaunchTime = Date.now() - launchTime;
     
     console.log(`All instances completed in ${totalLaunchTime}ms`);
     
     // Verify all instances succeeded
-    const successfulInstances = instances.filter(i => i.exitCode === 0);
-    console.log(`Successful instances: ${successfulInstances.length}/${instances.length}`);
+    const successfulInstances = Array.from(results.values()).filter(r => r.success);
+    console.log(`Successful instances: ${successfulInstances.length}/${results.size}`);
     
     // Verify outputs are correct
     let outputsCorrect = true;
-    for (let i = 0; i < instances.length; i++) {
-      const instance = instances[i];
-      const parsed = parseOutput(instance.output);
-      const content = parsed?.result || parsed?.content || parsed?.response || '';
+    let i = 0;
+    for (const [id, response] of results) {
+      const content = response.result || '';
       
       if (i < 3) {
         // Agent identification tests
         const expectedAgent = `Agent ${i + 1}`;
         const correct = content.includes(expectedAgent);
-        console.log(`${instance.id} output correct: ${correct}`);
+        console.log(`${id} output correct: ${correct}`);
         if (!correct) outputsCorrect = false;
       } else if (i === 3) {
         // Math test 1
         const correct = content.includes('40');
-        console.log(`${instance.id} calculation correct: ${correct}`);
+        console.log(`${id} calculation correct: ${correct}`);
         if (!correct) outputsCorrect = false;
       } else if (i === 4) {
         // Math test 2
         const correct = content.includes('50');
-        console.log(`${instance.id} calculation correct: ${correct}`);
+        console.log(`${id} calculation correct: ${correct}`);
         if (!correct) outputsCorrect = false;
       }
+      i++;
     }
     
     // Test 2: Stress test with more instances
@@ -179,28 +81,29 @@ async function runTest(): Promise<TestResult> {
     
     const stressPrompts = Array.from({ length: 10 }, (_, i) => ({
       id: `stress-${i}`,
-      prompt: `Calculate ${i} * ${i}. Reply with just the number.`,
-      sessionFile: path.join(os.tmpdir(), `claude-stress-${i}-${Date.now()}.json`)
+      prompt: `Calculate ${i} * ${i}. Reply with just the number.`
     }));
     
-    stressPrompts.forEach(p => sessionFiles.push(p.sessionFile));
-    
     const stressStartTime = Date.now();
-    const stressInstances = await Promise.all(
-      stressPrompts.map(item => 
-        spawnClaude(item.id, item.prompt, item.sessionFile)
-      )
-    );
+    const stressResults = await wrapper.executeConcurrent(stressPrompts);
     const stressDuration = Date.now() - stressStartTime;
     
-    const stressSuccessful = stressInstances.filter(i => i.exitCode === 0);
-    console.log(`Stress test: ${stressSuccessful.length}/${stressInstances.length} succeeded in ${stressDuration}ms`);
+    const stressSuccessful = Array.from(stressResults.values()).filter(r => r.success);
+    console.log(`Stress test: ${stressSuccessful.length}/${stressResults.size} succeeded in ${stressDuration}ms`);
     
     // Test 3: Session isolation in concurrent execution
     console.log('\nTest 3: Testing session isolation...');
     
     // First, create sessions with different data
-    const isolationTests = [
+    interface IsolationTest {
+      id: string;
+      sessionId?: string;
+      prompt1: string;
+      prompt2: string;
+      expected: string;
+    }
+    
+    const isolationTests: IsolationTest[] = [
       { 
         id: 'iso-1', 
         prompt1: 'My favorite animal is a cat. Remember this.',
@@ -217,12 +120,9 @@ async function runTest(): Promise<TestResult> {
     
     // Create initial sessions
     const setupPromises = isolationTests.map(async (test) => {
-      const sessionFile = path.join(os.tmpdir(), `claude-iso-${test.id}-${Date.now()}.json`);
-      sessionFiles.push(sessionFile);
-      test['sessionFile'] = sessionFile;
-      
-      const instance = await spawnClaude(test.id, test.prompt1, sessionFile);
-      return instance.exitCode === 0;
+      const { sessionId } = await wrapper.createSession(test.prompt1);
+      test.sessionId = sessionId;
+      return sessionId !== 'unknown';
     });
     
     const setupResults = await Promise.all(setupPromises);
@@ -230,75 +130,86 @@ async function runTest(): Promise<TestResult> {
     console.log('Session setups succeeded:', allSetupsSucceeded);
     
     // Now query both sessions concurrently
-    const queryPromises = isolationTests.map(test => 
-      spawnClaude(`${test.id}-query`, test.prompt2, test['sessionFile'])
-    );
+    const queryPromises = isolationTests.map(test => ({
+      id: `${test.id}-query`,
+      prompt: test.prompt2,
+      options: { sessionId: test.sessionId }
+    }));
     
-    const queryResults = await Promise.all(queryPromises);
+    const queryResults = await wrapper.executeConcurrent(queryPromises);
     
     let isolationCorrect = true;
     for (let i = 0; i < isolationTests.length; i++) {
       const test = isolationTests[i];
-      const result = queryResults[i];
-      const parsed = parseOutput(result.output);
-      const content = parsed?.result || parsed?.content || parsed?.response || '';
+      const result = queryResults.get(`${test.id}-query`);
+      const content = result?.result || '';
       const correct = content.toLowerCase().includes(test.expected);
       console.log(`${test.id} isolation correct: ${correct}`);
       if (!correct) isolationCorrect = false;
     }
     
-    // Clean up session files
-    for (const file of sessionFiles) {
-      try {
-        await fs.unlink(file);
-      } catch (e) {
-        // Ignore cleanup errors
+    // Test 4: Different agent types running concurrently
+    console.log('\nTest 4: Testing different agent types concurrently...');
+    
+    const agentPrompts = [
+      {
+        id: 'researcher',
+        prompt: 'What are the key features of TypeScript? Be brief.',
+        options: {
+          systemPrompt: 'You are a research specialist. Provide concise, factual information.'
+        }
+      },
+      {
+        id: 'coder',
+        prompt: 'Write a TypeScript function to add two numbers.',
+        options: {
+          systemPrompt: 'You are a code specialist. Write clean, simple code.'
+        }
+      },
+      {
+        id: 'reviewer',
+        prompt: 'Review this code: const x = 5; What could be improved?',
+        options: {
+          systemPrompt: 'You are a code reviewer. Focus on best practices.'
+        }
       }
-    }
+    ];
+    
+    const agentResults = await wrapper.executeConcurrent(agentPrompts);
+    const allAgentsSucceeded = Array.from(agentResults.values()).every(r => r.success);
+    console.log('All specialized agents succeeded:', allAgentsSucceeded);
     
     // Calculate metrics
-    const avgDuration = instances.reduce((sum, i) => 
-      sum + ((i.endTime || i.startTime) - i.startTime), 0
-    ) / instances.length;
-    
-    const maxDuration = Math.max(...instances.map(i => 
-      (i.endTime || i.startTime) - i.startTime
-    ));
+    const avgDuration = successfulInstances.reduce((sum, r) => 
+      sum + (r.metadata?.duration || 0), 0
+    ) / successfulInstances.length;
     
     // Determine if all tests passed
     const allTestsPassed = 
-      successfulInstances.length === instances.length &&
+      successfulInstances.length === results.size &&
       outputsCorrect &&
-      stressSuccessful.length >= stressInstances.length * 0.8 && // Allow 80% success for stress test
+      stressSuccessful.length >= stressResults.size * 0.8 && // Allow 80% success for stress test
       allSetupsSucceeded &&
-      isolationCorrect;
+      isolationCorrect &&
+      allAgentsSucceeded;
     
     return {
       testName,
       passed: allTestsPassed,
       duration: Date.now() - startTime,
       details: {
-        concurrentSuccess: `${successfulInstances.length}/${instances.length}`,
+        concurrentSuccess: `${successfulInstances.length}/${results.size}`,
         outputsCorrect,
-        stressTestSuccess: `${stressSuccessful.length}/${stressInstances.length}`,
+        stressTestSuccess: `${stressSuccessful.length}/${stressResults.size}`,
         sessionIsolation: isolationCorrect,
         avgInstanceDuration: Math.round(avgDuration),
-        maxInstanceDuration: Math.round(maxDuration),
         totalConcurrentTime: totalLaunchTime,
-        stressTestTime: stressDuration
+        stressTestTime: stressDuration,
+        specializedAgents: allAgentsSucceeded
       }
     };
     
   } catch (error) {
-    // Clean up session files on error
-    for (const file of sessionFiles) {
-      try {
-        await fs.unlink(file);
-      } catch (e) {
-        // Ignore cleanup errors
-      }
-    }
-    
     return {
       testName,
       passed: false,
