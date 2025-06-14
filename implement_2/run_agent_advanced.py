@@ -47,7 +47,8 @@ def load_task_config(task_file: Path) -> Dict[str, Any]:
         'workspace_id': None,
         'cleanup': True,
         'timeout': 300,
-        'debug': False
+        'debug': False,
+        'realtime_debug': False
     }
     
     for key, default_value in defaults.items():
@@ -226,6 +227,11 @@ def main():
         action="store_true",
         help="Enable Claude CLI debug mode and show debug output"
     )
+    parser.add_argument(
+        "--realtime-debug",
+        action="store_true",
+        help="Enable real-time streaming debug output (shows logs as they happen)"
+    )
     
     args = parser.parse_args()
     
@@ -269,7 +275,11 @@ def main():
         
         # Debug mode from either command line or JSON
         debug_enabled = args.debug or config.get('debug', False)
-        if debug_enabled:
+        realtime_debug = args.realtime_debug or config.get('realtime_debug', False)
+        
+        if realtime_debug:
+            print("🔍 Real-time debug mode enabled - streaming output as it happens")
+        elif debug_enabled:
             print("🔍 Debug mode enabled - Claude CLI will show verbose output")
         
         result = run_agent_with_io(
@@ -283,7 +293,8 @@ def main():
             workspace_id=config['workspace_id'],
             cleanup=config['cleanup'],
             timeout=config['timeout'],
-            debug=debug_enabled
+            debug=debug_enabled,
+            realtime_debug=realtime_debug
         )
         
         # Print result

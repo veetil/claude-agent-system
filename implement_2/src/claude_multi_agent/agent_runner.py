@@ -36,7 +36,8 @@ def run_agent_with_io(
     workspace_id: Optional[str] = None,
     cleanup: bool = True,
     timeout: int = 300,
-    debug: bool = False
+    debug: bool = False,
+    realtime_debug: bool = False
 ) -> AgentRunResult:
     """Run an agent with specified inputs and capture outputs.
     
@@ -57,6 +58,7 @@ def run_agent_with_io(
         cleanup: Whether to cleanup workspace after execution
         timeout: Timeout in seconds for agent execution
         debug: Enable Claude CLI debug mode
+        realtime_debug: Use real-time debug output (streams as it happens)
         
     Returns:
         AgentRunResult with success status, output text, and file/folder creation info
@@ -69,7 +71,14 @@ def run_agent_with_io(
         )
     """
     workspace_manager = WorkspaceManager()
-    shell_executor = ShellExecutor()
+    
+    # Use realtime executor if requested
+    if realtime_debug:
+        from .shell.executor_realtime import RealtimeShellExecutor
+        shell_executor = RealtimeShellExecutor()
+        debug = True  # Realtime debug implies debug mode
+    else:
+        shell_executor = ShellExecutor()
     
     # Generate workspace ID if not provided
     if not workspace_id:

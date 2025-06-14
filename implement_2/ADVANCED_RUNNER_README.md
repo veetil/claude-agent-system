@@ -32,6 +32,9 @@ python run_agent_advanced.py --task task.json --log-level DEBUG
 
 # Enable Claude CLI debug mode
 python run_agent_advanced.py --task task.json --debug
+
+# Enable real-time streaming debug output
+python run_agent_advanced.py --task task.json --realtime-debug
 ```
 
 ## Task JSON Format
@@ -97,6 +100,7 @@ python run_agent_advanced.py --task task.json --debug
 - `timeout`: Maximum execution time in seconds (default: 300)
 - `cleanup`: Whether to clean up workspace after execution (default: true)
 - `debug`: Enable Claude CLI debug mode for verbose output (default: false)
+- `realtime_debug`: Enable real-time streaming debug output (default: false)
 
 ## Examples
 
@@ -215,21 +219,36 @@ python run_agent_advanced.py --task task.json --output-dir ./today_results
 This overrides all output destinations in the task JSON to use the specified directory.
 
 ### Debug Mode
+
+#### Standard Debug Mode
 ```bash
-# Enable both application logging and Claude CLI debug output
-python run_agent_advanced.py --task task.json --log-level DEBUG --debug --verbose
+# Enable Claude CLI debug output (shown after completion)
+python run_agent_advanced.py --task task.json --debug --verbose
+```
+
+#### Real-time Debug Mode
+```bash
+# Enable real-time streaming debug output
+python run_agent_advanced.py --task task.json --realtime-debug
+```
+
+#### Full Debug Mode
+```bash
+# Enable all debugging features
+python run_agent_advanced.py --task task.json --log-level DEBUG --realtime-debug --verbose
 ```
 
 This provides:
 - Maximum application logging detail (--log-level DEBUG)
-- Claude CLI debug output including stderr/stdout (--debug)
+- Real-time Claude CLI debug output as it happens (--realtime-debug)
 - Full agent responses in the output (--verbose)
 
-You can also enable debug mode in the task JSON:
+You can also enable debug modes in the task JSON:
 ```json
 {
   "prompt": "...",
-  "debug": true,
+  "debug": true,           // Standard debug mode
+  "realtime_debug": true,  // Real-time streaming debug
   // other fields...
 }
 ```
@@ -239,6 +258,12 @@ When debug mode is enabled, you'll see:
 - Full stdout and stderr from Claude CLI
 - Detailed execution logs
 - Any error messages or warnings from the CLI
+
+When real-time debug is enabled, you'll see:
+- Live streaming of [DEBUG] messages as they occur
+- Timestamped output lines
+- Real-time progress updates
+- Immediate feedback on what Claude is doing
 
 ### Batch Processing
 Create multiple task JSON files and process them:
