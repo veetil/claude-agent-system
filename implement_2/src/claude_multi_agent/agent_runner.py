@@ -35,7 +35,8 @@ def run_agent_with_io(
     system_prompt: Optional[str] = None,
     workspace_id: Optional[str] = None,
     cleanup: bool = True,
-    timeout: int = 300
+    timeout: int = 300,
+    debug: bool = False
 ) -> AgentRunResult:
     """Run an agent with specified inputs and capture outputs.
     
@@ -55,6 +56,7 @@ def run_agent_with_io(
         workspace_id: Optional workspace ID (auto-generated if not provided)
         cleanup: Whether to cleanup workspace after execution
         timeout: Timeout in seconds for agent execution
+        debug: Enable Claude CLI debug mode
         
     Returns:
         AgentRunResult with success status, output text, and file/folder creation info
@@ -99,7 +101,8 @@ def run_agent_with_io(
         response = shell_executor.execute_claude(
             prompt=full_prompt,
             working_dir=workspace_path,
-            timeout=timeout
+            timeout=timeout,
+            debug=debug
         )
         
         # Extract outputs

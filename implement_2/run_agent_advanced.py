@@ -46,7 +46,8 @@ def load_task_config(task_file: Path) -> Dict[str, Any]:
         'system_prompt': None,
         'workspace_id': None,
         'cleanup': True,
-        'timeout': 300
+        'timeout': 300,
+        'debug': False
     }
     
     for key, default_value in defaults.items():
@@ -70,6 +71,7 @@ def print_task_summary(config: Dict[str, Any]) -> None:
     print(f"\nWorkspace ID: {config.get('workspace_id', 'auto-generated')}")
     print(f"Timeout: {config['timeout']} seconds")
     print(f"Cleanup: {config['cleanup']}")
+    print(f"Debug: {config.get('debug', False)}")
     
     # Input summary
     print("\nINPUTS:")
@@ -215,9 +217,14 @@ def main():
         help="Set logging level"
     )
     parser.add_argument(
-        "--no-confirm",
+        "--confirm",
         action="store_true",
-        help="Skip confirmation prompt"
+        help="Display confirmation prompt"
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable Claude CLI debug mode and show debug output"
     )
     
     args = parser.parse_args()
@@ -249,7 +256,7 @@ def main():
         print_task_summary(config)
         
         # Confirm before running
-        if not args.no_confirm:
+        if args.confirm:
             print("\nPress Enter to start execution (Ctrl+C to cancel)...")
             try:
                 input()
@@ -259,6 +266,12 @@ def main():
         
         # Run the agent
         print("\nExecuting agent...")
+        
+        # Debug mode from either command line or JSON
+        debug_enabled = args.debug or config.get('debug', False)
+        if debug_enabled:
+            print("🔍 Debug mode enabled - Claude CLI will show verbose output")
+        
         result = run_agent_with_io(
             prompt=config['prompt'],
             input_files=config['input_files'],
@@ -269,7 +282,8 @@ def main():
             system_prompt=config['system_prompt'],
             workspace_id=config['workspace_id'],
             cleanup=config['cleanup'],
-            timeout=config['timeout']
+            timeout=config['timeout'],
+            debug=debug_enabled
         )
         
         # Print result

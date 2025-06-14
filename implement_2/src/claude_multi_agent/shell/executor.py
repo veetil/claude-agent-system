@@ -42,7 +42,8 @@ class ShellExecutor:
         self, 
         prompt: str, 
         session_id: Optional[str] = None,
-        output_format: str = "json"
+        output_format: str = "json",
+        debug: bool = False
     ) -> List[str]:
         """Build Claude CLI command arguments
         
@@ -50,6 +51,7 @@ class ShellExecutor:
             prompt: The prompt to send to Claude
             session_id: Optional session ID to resume
             output_format: Output format (default: json)
+            debug: Enable Claude CLI debug mode
             
         Returns:
             List of command arguments
@@ -61,6 +63,9 @@ class ShellExecutor:
             "--output-format", output_format
         ]
         
+        if debug:
+            args.append("--debug")
+            
         if session_id:
             args.extend(["-r", session_id])
             
@@ -131,7 +136,8 @@ class ShellExecutor:
         prompt: str, 
         session_id: Optional[str] = None,
         working_dir: Optional[Path] = None,
-        timeout: int = 300
+        timeout: int = 300,
+        debug: bool = False
     ) -> Dict[str, Any]:
         """Execute Claude CLI command and return parsed response
         
@@ -140,6 +146,7 @@ class ShellExecutor:
             session_id: Optional session ID to resume
             working_dir: Working directory for command execution
             timeout: Command timeout in seconds
+            debug: Enable Claude CLI debug mode
             
         Returns:
             Parsed JSON response with session_id and result
@@ -149,7 +156,7 @@ class ShellExecutor:
             SessionError: If session not found
         """
         # Build command
-        args = self._build_claude_command(prompt, session_id)
+        args = self._build_claude_command(prompt, session_id, debug=debug)
         shell_cmd = " ".join(shlex.quote(arg) for arg in args)
         
         # Set working directory
@@ -167,6 +174,14 @@ class ShellExecutor:
                 text=True,
                 timeout=timeout
             )
+            
+            # Log debug output if enabled
+            if debug:
+                logger.info("=== Claude CLI Debug Output ===")
+                if proc.stderr:
+                    logger.info(f"STDERR:\n{proc.stderr}")
+                logger.info(f"STDOUT:\n{proc.stdout}")
+                logger.info("=== End Debug Output ===")
             
             if proc.returncode != 0:
                 self._handle_error(proc.stderr, session_id)
@@ -199,7 +214,8 @@ class ShellExecutor:
         prompt: str, 
         session_id: Optional[str] = None,
         working_dir: Optional[Path] = None,
-        timeout: int = 300
+        timeout: int = 300,
+        debug: bool = False
     ) -> Dict[str, Any]:
         """Async version of execute_claude
         
@@ -208,6 +224,7 @@ class ShellExecutor:
             session_id: Optional session ID to resume
             working_dir: Working directory for command execution
             timeout: Command timeout in seconds
+            debug: Enable Claude CLI debug mode
             
         Returns:
             Parsed JSON response with session_id and result
@@ -217,5 +234,6 @@ class ShellExecutor:
             prompt,
             session_id,
             working_dir,
-            timeout
+            timeout,
+            debug
         )

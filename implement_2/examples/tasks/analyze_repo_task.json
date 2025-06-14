@@ -25,6 +25,6 @@
     }
   ],
   "workspace_id": "doc_generator",
-  "timeout": 180,
+  "timeout": 600,
   "cleanup": false
 }

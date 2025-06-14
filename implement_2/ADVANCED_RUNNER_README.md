@@ -29,6 +29,9 @@ python run_agent_advanced.py --task task.json --output-dir ./results
 
 # Set logging level
 python run_agent_advanced.py --task task.json --log-level DEBUG
+
+# Enable Claude CLI debug mode
+python run_agent_advanced.py --task task.json --debug
 ```
 
 ## Task JSON Format
@@ -73,7 +76,8 @@ python run_agent_advanced.py --task task.json --log-level DEBUG
   ],
   "workspace_id": "optional_persistent_workspace_name",
   "timeout": 300,
-  "cleanup": true
+  "cleanup": true,
+  "debug": false
 }
 ```
 
@@ -92,6 +96,7 @@ python run_agent_advanced.py --task task.json --log-level DEBUG
 - `workspace_id`: Persistent workspace ID (auto-generated if not provided)
 - `timeout`: Maximum execution time in seconds (default: 300)
 - `cleanup`: Whether to clean up workspace after execution (default: true)
+- `debug`: Enable Claude CLI debug mode for verbose output (default: false)
 
 ## Examples
 
@@ -211,10 +216,29 @@ This overrides all output destinations in the task JSON to use the specified dir
 
 ### Debug Mode
 ```bash
-python run_agent_advanced.py --task task.json --log-level DEBUG --verbose
+# Enable both application logging and Claude CLI debug output
+python run_agent_advanced.py --task task.json --log-level DEBUG --debug --verbose
 ```
 
-Provides maximum logging detail for troubleshooting.
+This provides:
+- Maximum application logging detail (--log-level DEBUG)
+- Claude CLI debug output including stderr/stdout (--debug)
+- Full agent responses in the output (--verbose)
+
+You can also enable debug mode in the task JSON:
+```json
+{
+  "prompt": "...",
+  "debug": true,
+  // other fields...
+}
+```
+
+When debug mode is enabled, you'll see:
+- Claude CLI command being executed
+- Full stdout and stderr from Claude CLI
+- Detailed execution logs
+- Any error messages or warnings from the CLI
 
 ### Batch Processing
 Create multiple task JSON files and process them:

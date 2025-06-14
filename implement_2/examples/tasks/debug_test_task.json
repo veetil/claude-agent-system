@@ -1,0 +1,13 @@
+{
+  "prompt": "Create a simple hello.txt file with the text 'Hello from debug mode!'",
+  "output_files": [
+    {
+      "name": "hello.txt",
+      "src_path": "hello.txt",
+      "dest_path": "./outputs"
+    }
+  ],
+  "timeout": 30,
+  "cleanup": true,
+  "debug": true
+}
