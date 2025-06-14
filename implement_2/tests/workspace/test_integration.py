@@ -187,15 +187,21 @@ print(multiply(3, 4))  # 12
         test_file = workspace_path / "test.txt"
         test_file.write_text("Temporary data")
         
-        # Use with Claude
+        # Use with Claude - now with --dangerously-skip-permissions
         response = executor.execute_claude(
             prompt="Create a file called output.txt with the text 'Hello from Claude'",
-            working_dir=workspace_path
+            working_dir=workspace_path,
+            timeout=30  # Shorter timeout for test
         )
         
         # Verify file was created
         output_file = workspace_path / "output.txt"
-        assert output_file.exists()
+        if not output_file.exists():
+            # Log the response for debugging
+            print(f"Claude response: {response.get('result', 'No result')}")
+        
+        assert output_file.exists(), "Claude should have created output.txt"
+        assert output_file.read_text().strip() == "Hello from Claude"
         
         # Clean up workspace
         manager.cleanup_workspace("temp-workspace")

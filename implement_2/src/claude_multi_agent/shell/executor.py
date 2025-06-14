@@ -54,7 +54,12 @@ class ShellExecutor:
         Returns:
             List of command arguments
         """
-        args = ["claude", "-p", prompt, "--output-format", output_format]
+        args = [
+            "claude", 
+            "--dangerously-skip-permissions",  # Enable autonomous operation
+            "-p", prompt, 
+            "--output-format", output_format
+        ]
         
         if session_id:
             args.extend(["-r", session_id])
