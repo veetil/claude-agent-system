@@ -260,10 +260,10 @@ When debug mode is enabled, you'll see:
 - Any error messages or warnings from the CLI
 
 When real-time debug is enabled, you'll see:
-- Live streaming of [DEBUG] messages as they occur
-- Timestamped output lines
-- Real-time progress updates
-- Immediate feedback on what Claude is doing
+- Live streaming of [DEBUG] status messages as they occur
+- Timestamped debug status updates (e.g., "Stream started - received first chunk")
+- Immediate feedback when Claude starts processing
+- Note: Claude CLI processes internally and returns results all at once, so actual content is not streamed
 
 ### Batch Processing
 Create multiple task JSON files and process them:

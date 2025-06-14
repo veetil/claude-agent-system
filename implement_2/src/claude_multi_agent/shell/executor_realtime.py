@@ -62,7 +62,11 @@ class RealtimeShellExecutor:
         return args
     
     def _read_stream(self, stream, stream_name: str, output_queue: queue.Queue, debug: bool):
-        """Read from a stream and log/queue output in real-time"""
+        """Read from a stream and log/queue output in real-time
+        
+        Note: Claude CLI processes internally and returns results all at once.
+        The [DEBUG] messages we see are status updates, not actual content streaming.
+        """
         try:
             for line in iter(stream.readline, ''):
                 if line:
