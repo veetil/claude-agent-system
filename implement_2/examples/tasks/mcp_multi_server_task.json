@@ -1,0 +1,26 @@
+{
+    "prompt": "Complete the following tasks using MCP servers:\n\n1. Use the GitHub MCP server to find information about the 'anthropics/anthropic-sdk-python' repository.\n\n2. Use the Perplexity MCP server to search for 'what is Claude AI and how does it compare to GPT-4'.\n\n3. Create a comprehensive report combining both findings in a file called 'claude_research_report.md'. The report should include:\n   - Repository details from GitHub\n   - Key insights about Claude AI from the web search\n   - A comparison section\n   - Your analysis and conclusions\n\nMake the report well-formatted with proper markdown sections.",
+    
+    "input_files": [],
+    "input_folders": [],
+    "input_repos": [],
+    
+    "output_files": [
+        {
+            "name": "claude_research_report.md",
+            "src_path": "claude_research_report.md",
+            "dest_path": "./outputs"
+        }
+    ],
+    
+    "output_folders": [],
+    
+    "system_prompt": "You are a research assistant with access to multiple MCP servers. Use them effectively to gather information and create comprehensive reports.",
+    
+    "workspace_id": "mcp_multi_research",
+    "cleanup": false,
+    "timeout": 180,
+    "debug": false,
+    "realtime_debug": true,
+    "enable_mcp": true
+}

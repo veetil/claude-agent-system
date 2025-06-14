@@ -23,14 +23,18 @@ logger = get_logger(__name__)
 class RealtimeShellExecutor:
     """Execute Claude CLI commands with real-time output streaming"""
     
-    def __init__(self, shell: Optional[str] = None):
+    def __init__(self, shell: Optional[str] = None, mcp_manager=None):
         """Initialize the executor
         
         Args:
             shell: Shell to use (defaults to $SHELL or /bin/bash)
+            mcp_manager: Optional MCPManager instance for MCP support
         """
         self.shell = shell or os.environ.get("SHELL", "/bin/bash")
+        self.mcp_manager = mcp_manager
         logger.info(f"Initialized RealtimeShellExecutor with shell: {self.shell}")
+        if self.mcp_manager:
+            logger.info("MCP support enabled")
         self._validate_shell()
     
     def _validate_shell(self):
@@ -44,7 +48,8 @@ class RealtimeShellExecutor:
         session_id: Optional[str] = None,
         output_format: str = "json",
         debug: bool = False,
-        streaming: bool = False
+        streaming: bool = False,
+        enable_mcp: bool = True
     ) -> List[str]:
         """Build Claude CLI command arguments"""
         # Use stream-json format for real-time output
@@ -64,6 +69,10 @@ class RealtimeShellExecutor:
             
         if session_id:
             args.extend(["-r", session_id])
+        
+        # Add MCP support if available
+        if enable_mcp and self.mcp_manager:
+            args = self.mcp_manager.prepare_claude_command(args, enable_mcp=True)
             
         return args
     
@@ -199,7 +208,8 @@ class RealtimeShellExecutor:
         session_id: Optional[str] = None,
         working_dir: Optional[Path] = None,
         timeout: int = 300,
-        debug: bool = False
+        debug: bool = False,
+        enable_mcp: bool = True
     ) -> Dict[str, Any]:
         """Execute Claude CLI command with real-time output
         
@@ -209,6 +219,7 @@ class RealtimeShellExecutor:
             working_dir: Working directory for command execution
             timeout: Command timeout in seconds
             debug: Enable Claude CLI debug mode and real-time output
+            enable_mcp: Enable MCP support if mcp_manager is available
             
         Returns:
             Parsed JSON response with session_id and result
@@ -217,11 +228,19 @@ class RealtimeShellExecutor:
         streaming = debug
         
         # Build command
-        args = self._build_claude_command(prompt, session_id, debug=debug, streaming=streaming)
+        args = self._build_claude_command(prompt, session_id, debug=debug, streaming=streaming, enable_mcp=enable_mcp)
         shell_cmd = " ".join(shlex.quote(arg) for arg in args)
         
         # Set working directory
         cwd = str(working_dir) if working_dir else os.getcwd()
+        
+        # Prepare environment with MCP variables if available
+        env = None
+        if enable_mcp and self.mcp_manager:
+            env = self.mcp_manager.get_mcp_env()
+            # If MCP is available, setup workspace MCP files
+            if working_dir:
+                self.mcp_manager.setup_workspace_mcp(working_dir)
         
         logger.debug(f"Executing: {shell_cmd} in {cwd}")
         
@@ -229,6 +248,8 @@ class RealtimeShellExecutor:
             logger.info("=== Claude CLI Real-time Debug Output ===")
             logger.info(f"Command: {shell_cmd}")
             logger.info(f"Working dir: {cwd}")
+            if env and self.mcp_manager:
+                logger.info("MCP support: Enabled")
         
         try:
             # Execute via interactive shell
@@ -238,7 +259,8 @@ class RealtimeShellExecutor:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                bufsize=1  # Line buffered
+                bufsize=1,  # Line buffered
+                env=env  # Use MCP environment if available
             )
             
             # Create queues for output
@@ -319,7 +341,8 @@ class RealtimeShellExecutor:
         session_id: Optional[str] = None,
         working_dir: Optional[Path] = None,
         timeout: int = 300,
-        debug: bool = False
+        debug: bool = False,
+        enable_mcp: bool = True
     ) -> Dict[str, Any]:
         """Async version of execute_claude"""
         import asyncio
@@ -329,5 +352,6 @@ class RealtimeShellExecutor:
             session_id,
             working_dir,
             timeout,
-            debug
+            debug,
+            enable_mcp
         )

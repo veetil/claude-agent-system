@@ -1,0 +1,155 @@
+{
+  "project": "Learn - Pure Lua Neural Network Library",
+  "language": "Lua",
+  "metrics": {
+    "total_lines_of_code": 340,
+    "files": {
+      "total": 6,
+      "by_type": {
+        "lua": 6
+      },
+      "list": [
+        "learn.lua",
+        "tensor.lua",
+        "model.lua",
+        "layer.lua",
+        "transfer.lua",
+        "criterion.lua"
+      ]
+    },
+    "modules": {
+      "core": {
+        "learn": {
+          "description": "Main module and utility functions",
+          "functions": [
+            "learn.gaussian",
+            "learn.normalize",
+            "learn.unormalize",
+            "learn.test"
+          ],
+          "lines": 82
+        }
+      },
+      "components": {
+        "tensor": {
+          "description": "2D matrix operations and math utilities",
+          "functions": [
+            "learn.tensor",
+            "tensor.set",
+            "tensor.get",
+            "tensor.copy",
+            "tensor.each",
+            "tensor.map",
+            "tensor.add",
+            "tensor.sub",
+            "tensor.div",
+            "tensor.mul",
+            "tensor.scale",
+            "tensor.pow",
+            "tensor.sum",
+            "tensor.dot",
+            "tensor.transpose",
+            "tensor.string"
+          ],
+          "lines": 99
+        },
+        "model": {
+          "description": "Neural network model implementation",
+          "classes": [
+            "learn.model.nnet"
+          ],
+          "functions": [
+            "model.forward",
+            "model.backward",
+            "model.update",
+            "model.fit",
+            "model.predict"
+          ],
+          "lines": 70
+        },
+        "layer": {
+          "description": "Neural network layers",
+          "classes": [
+            "learn.layer.linear"
+          ],
+          "functions": [
+            "layer.forward",
+            "layer.backward",
+            "layer.update"
+          ],
+          "lines": 32
+        },
+        "transfer": {
+          "description": "Activation/transfer functions",
+          "classes": [
+            "learn.transfer.transfer",
+            "learn.transfer.sigmoid",
+            "learn.transfer.tanh",
+            "learn.transfer.relu"
+          ],
+          "functions": [
+            "transfer.forward",
+            "transfer.backward",
+            "transfer.update"
+          ],
+          "lines": 48
+        },
+        "criterion": {
+          "description": "Loss functions",
+          "classes": [
+            "learn.criterion.mse"
+          ],
+          "functions": [
+            "criterion.forward",
+            "criterion.backward"
+          ],
+          "lines": 15
+        }
+      }
+    },
+    "statistics": {
+      "total_functions": 35,
+      "total_classes": 7,
+      "average_lines_per_file": 56.67,
+      "code_structure": {
+        "core_utilities": "24.1%",
+        "tensor_operations": "29.1%",
+        "model_logic": "20.6%",
+        "layers": "9.4%",
+        "activations": "14.1%",
+        "loss_functions": "4.4%"
+      }
+    },
+    "features": {
+      "neural_network_components": [
+        "Fully connected layers",
+        "Sigmoid activation",
+        "Tanh activation",
+        "ReLU activation",
+        "Mean Squared Error loss"
+      ],
+      "tensor_operations": [
+        "Matrix multiplication",
+        "Element-wise operations",
+        "Transpose",
+        "Broadcasting"
+      ],
+      "training_features": [
+        "Backpropagation",
+        "Gradient descent",
+        "Automatic normalization",
+        "Batch training"
+      ]
+    },
+    "dependencies": {
+      "external": [],
+      "internal": {
+        "learn.lua": ["tensor.lua", "model.lua", "layer.lua", "transfer.lua", "criterion.lua"],
+        "model.lua": ["tensor.lua", "criterion.lua"],
+        "layer.lua": ["tensor.lua"],
+        "transfer.lua": ["tensor.lua"],
+        "criterion.lua": ["tensor.lua"]
+      }
+    }
+  }
+}

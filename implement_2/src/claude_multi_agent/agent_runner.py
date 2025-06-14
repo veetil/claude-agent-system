@@ -37,7 +37,10 @@ def run_agent_with_io(
     cleanup: bool = True,
     timeout: int = 300,
     debug: bool = False,
-    realtime_debug: bool = False
+    realtime_debug: bool = False,
+    enable_mcp: bool = False,
+    mcp_config_path: Optional[Path] = None,
+    mcp_env_file: Optional[Path] = None
 ) -> AgentRunResult:
     """Run an agent with specified inputs and capture outputs.
     
@@ -59,6 +62,9 @@ def run_agent_with_io(
         timeout: Timeout in seconds for agent execution
         debug: Enable Claude CLI debug mode
         realtime_debug: Use real-time debug output (streams as it happens)
+        enable_mcp: Enable Model Context Protocol support
+        mcp_config_path: Path to MCP configuration file (defaults to .roo/mcp.json)
+        mcp_env_file: Path to MCP environment file (defaults to .env.mcp)
         
     Returns:
         AgentRunResult with success status, output text, and file/folder creation info
@@ -72,13 +78,22 @@ def run_agent_with_io(
     """
     workspace_manager = WorkspaceManager()
     
+    # Create MCP manager if enabled
+    mcp_manager = None
+    if enable_mcp:
+        from .mcp_support import MCPManager
+        mcp_manager = MCPManager(
+            mcp_config_path=mcp_config_path,
+            env_file=mcp_env_file
+        )
+    
     # Use realtime executor if requested
     if realtime_debug:
         from .shell.executor_realtime import RealtimeShellExecutor
-        shell_executor = RealtimeShellExecutor()
+        shell_executor = RealtimeShellExecutor(mcp_manager=mcp_manager)
         debug = True  # Realtime debug implies debug mode
     else:
-        shell_executor = ShellExecutor()
+        shell_executor = ShellExecutor(mcp_manager=mcp_manager)
     
     # Generate workspace ID if not provided
     if not workspace_id:
@@ -111,7 +126,8 @@ def run_agent_with_io(
             prompt=full_prompt,
             working_dir=workspace_path,
             timeout=timeout,
-            debug=debug
+            debug=debug,
+            enable_mcp=enable_mcp
         )
         
         # Extract outputs

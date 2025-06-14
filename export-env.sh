@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Load .env file and export variables
+# Load .env.mcp file and export variables
 while IFS= read -r line || [ -n "$line" ]; do
   # Skip comments and empty lines
   if [[ $line =~ ^[[:space:]]*$ || $line =~ ^[[:space:]]*# ]]; then
@@ -16,9 +16,10 @@ while IFS= read -r line || [ -n "$line" ]; do
   # Extract variable name for display
   var_name=$(echo "$line" | cut -d= -f1)
   echo "Exported: $var_name"
-done < .env
+done < .env.mcp
 
-# Verify a few key variables (optional)
+# Verify a few key MCP variables (optional)
 echo -e "\nVerification:"
-echo "PYTHON_BACKEND_URL: $PYTHON_BACKEND_URL"
-echo "TEMPLATE_NAME: $TEMPLATE_NAME"
+echo "GITHUB_TOKEN: ${GITHUB_TOKEN:0:20}..." 
+echo "PERPLEXITY_API_KEY: ${PERPLEXITY_API_KEY:0:20}..."
+echo "FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY:0:20}..."

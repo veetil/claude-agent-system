@@ -23,15 +23,19 @@ class ShellExecutor:
     an interactive shell to ensure aliases and functions are loaded.
     """
     
-    def __init__(self, shell: Optional[str] = None):
+    def __init__(self, shell: Optional[str] = None, mcp_manager=None):
         """Initialize shell executor
         
         Args:
             shell: Path to shell executable. Defaults to $SHELL or /bin/bash
+            mcp_manager: Optional MCPManager instance for MCP support
         """
         self.shell = shell or os.environ.get("SHELL", "/bin/bash")
+        self.mcp_manager = mcp_manager
         self._validate_shell()
         logger.info(f"Initialized ShellExecutor with shell: {self.shell}")
+        if self.mcp_manager:
+            logger.info("MCP support enabled")
         
     def _validate_shell(self):
         """Ensure shell is available and executable"""
@@ -43,7 +47,8 @@ class ShellExecutor:
         prompt: str, 
         session_id: Optional[str] = None,
         output_format: str = "json",
-        debug: bool = False
+        debug: bool = False,
+        enable_mcp: bool = True
     ) -> List[str]:
         """Build Claude CLI command arguments
         
@@ -52,6 +57,7 @@ class ShellExecutor:
             session_id: Optional session ID to resume
             output_format: Output format (default: json)
             debug: Enable Claude CLI debug mode
+            enable_mcp: Enable MCP support if mcp_manager is available
             
         Returns:
             List of command arguments
@@ -68,6 +74,10 @@ class ShellExecutor:
             
         if session_id:
             args.extend(["-r", session_id])
+        
+        # Add MCP support if available
+        if enable_mcp and self.mcp_manager:
+            args = self.mcp_manager.prepare_claude_command(args, enable_mcp=True)
             
         return args
     
@@ -137,7 +147,8 @@ class ShellExecutor:
         session_id: Optional[str] = None,
         working_dir: Optional[Path] = None,
         timeout: int = 300,
-        debug: bool = False
+        debug: bool = False,
+        enable_mcp: bool = True
     ) -> Dict[str, Any]:
         """Execute Claude CLI command and return parsed response
         
@@ -147,6 +158,7 @@ class ShellExecutor:
             working_dir: Working directory for command execution
             timeout: Command timeout in seconds
             debug: Enable Claude CLI debug mode
+            enable_mcp: Enable MCP support if mcp_manager is available
             
         Returns:
             Parsed JSON response with session_id and result
@@ -156,11 +168,19 @@ class ShellExecutor:
             SessionError: If session not found
         """
         # Build command
-        args = self._build_claude_command(prompt, session_id, debug=debug)
+        args = self._build_claude_command(prompt, session_id, debug=debug, enable_mcp=enable_mcp)
         shell_cmd = " ".join(shlex.quote(arg) for arg in args)
         
         # Set working directory
         cwd = str(working_dir) if working_dir else os.getcwd()
+        
+        # Prepare environment with MCP variables if available
+        env = None
+        if enable_mcp and self.mcp_manager:
+            env = self.mcp_manager.get_mcp_env()
+            # If MCP is available, setup workspace MCP files
+            if working_dir:
+                self.mcp_manager.setup_workspace_mcp(working_dir)
         
         logger.debug(f"Executing: {shell_cmd} in {cwd}")
         
@@ -172,7 +192,8 @@ class ShellExecutor:
                 cwd=cwd,
                 capture_output=True,
                 text=True,
-                timeout=timeout
+                timeout=timeout,
+                env=env  # Use MCP environment if available
             )
             
             # Log debug output if enabled
@@ -215,7 +236,8 @@ class ShellExecutor:
         session_id: Optional[str] = None,
         working_dir: Optional[Path] = None,
         timeout: int = 300,
-        debug: bool = False
+        debug: bool = False,
+        enable_mcp: bool = True
     ) -> Dict[str, Any]:
         """Async version of execute_claude
         
@@ -225,6 +247,7 @@ class ShellExecutor:
             working_dir: Working directory for command execution
             timeout: Command timeout in seconds
             debug: Enable Claude CLI debug mode
+            enable_mcp: Enable MCP support if mcp_manager is available
             
         Returns:
             Parsed JSON response with session_id and result
@@ -235,5 +258,6 @@ class ShellExecutor:
             session_id,
             working_dir,
             timeout,
-            debug
+            debug,
+            enable_mcp
         )

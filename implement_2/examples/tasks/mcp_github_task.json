@@ -1,0 +1,27 @@
+{
+    "prompt": "Use the GitHub MCP server to search for repositories related to 'claude' and 'multi-agent'. Find the top 5 repositories and create a summary report with:\n1. Repository name and owner\n2. Description\n3. Star count\n4. Main language\n5. Last update date\n\nSave the report as 'github_claude_repos.md'",
+    
+    "input_files": [],
+    "input_folders": [],
+    "input_repos": [],
+    
+    "output_files": [
+        {
+            "name": "github_claude_repos.md",
+            "src_path": "github_claude_repos.md",
+            "dest_path": "./outputs"
+        }
+    ],
+    
+    "output_folders": [],
+    
+    "system_prompt": "You are a helpful assistant that can use MCP servers to access external services. When using MCP servers, be specific about which server you're using.",
+    
+    "workspace_id": "mcp_github_search",
+    "cleanup": false,
+    "timeout": 120,
+    "debug": false,
+    "enable_mcp": true,
+    "mcp_config_path": null,
+    "mcp_env_file": null
+}

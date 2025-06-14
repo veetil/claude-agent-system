@@ -1,0 +1,22 @@
+# Claude Agent Demo - Python Dependencies
+# Production-ready Flask web application requirements
+
+# Core Flask framework
+Flask==3.0.0
+Werkzeug==3.0.1
+
+# Flask extensions
+Flask-CORS==4.0.0       # Cross-Origin Resource Sharing support
+Flask-Limiter==3.5.0    # Rate limiting functionality
+
+# Database
+# SQLite3 is included in Python standard library
+
+# Additional dependencies for Flask-Limiter
+limits==3.6.0
+
+# Production server (alternative to Flask's development server)
+gunicorn==21.2.0
+
+# Optional: For enhanced performance and features
+python-dotenv==1.0.0    # Environment variable management

@@ -48,7 +48,10 @@ def load_task_config(task_file: Path) -> Dict[str, Any]:
         'cleanup': True,
         'timeout': 300,
         'debug': False,
-        'realtime_debug': False
+        'realtime_debug': False,
+        'enable_mcp': False,
+        'mcp_config_path': None,
+        'mcp_env_file': None
     }
     
     for key, default_value in defaults.items():
@@ -73,6 +76,7 @@ def print_task_summary(config: Dict[str, Any]) -> None:
     print(f"Timeout: {config['timeout']} seconds")
     print(f"Cleanup: {config['cleanup']}")
     print(f"Debug: {config.get('debug', False)}")
+    print(f"MCP Enabled: {config.get('enable_mcp', False)}")
     
     # Input summary
     print("\nINPUTS:")
@@ -232,6 +236,21 @@ def main():
         action="store_true",
         help="Enable real-time streaming debug output (shows logs as they happen)"
     )
+    parser.add_argument(
+        "--enable-mcp",
+        action="store_true",
+        help="Enable Model Context Protocol (MCP) support"
+    )
+    parser.add_argument(
+        "--mcp-config",
+        type=Path,
+        help="Path to MCP configuration file (defaults to .roo/mcp.json)"
+    )
+    parser.add_argument(
+        "--mcp-env",
+        type=Path,
+        help="Path to MCP environment file (defaults to .env.mcp)"
+    )
     
     args = parser.parse_args()
     
@@ -277,10 +296,22 @@ def main():
         debug_enabled = args.debug or config.get('debug', False)
         realtime_debug = args.realtime_debug or config.get('realtime_debug', False)
         
+        # MCP settings from command line or JSON
+        enable_mcp = args.enable_mcp or config.get('enable_mcp', False)
+        mcp_config_path = args.mcp_config or config.get('mcp_config_path')
+        mcp_env_file = args.mcp_env or config.get('mcp_env_file')
+        
         if realtime_debug:
             print("🔍 Real-time debug mode enabled - streaming output as it happens")
         elif debug_enabled:
             print("🔍 Debug mode enabled - Claude CLI will show verbose output")
+        
+        if enable_mcp:
+            print("🔌 MCP support enabled")
+            if mcp_config_path:
+                print(f"   Config: {mcp_config_path}")
+            if mcp_env_file:
+                print(f"   Env file: {mcp_env_file}")
         
         result = run_agent_with_io(
             prompt=config['prompt'],
@@ -294,7 +325,10 @@ def main():
             cleanup=config['cleanup'],
             timeout=config['timeout'],
             debug=debug_enabled,
-            realtime_debug=realtime_debug
+            realtime_debug=realtime_debug,
+            enable_mcp=enable_mcp,
+            mcp_config_path=mcp_config_path,
+            mcp_env_file=mcp_env_file
         )
         
         # Print result
