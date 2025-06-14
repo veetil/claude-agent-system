@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ app_name }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .header { background: #f0f0f0; padding: 20px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{ app_name }}</h1>
+            <p>Version: {{ version }}</p>
+        </div>
+        <div class="content">
+            <h2>Welcome</h2>
+            <p>This is a demo application created by Claude Agent.</p>
+            <ul>
+                <li><a href="/api">API Documentation</a></li>
+                <li><a href="/status">System Status</a></li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

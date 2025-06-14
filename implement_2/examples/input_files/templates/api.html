@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation - {{ app_name }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .endpoint { background: #f8f8f8; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        code { background: #e0e0e0; padding: 2px 5px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>API Documentation</h1>
+        <p><a href="/">Back to Home</a></p>
+        
+        <div class="endpoint">
+            <h3>GET /api/status</h3>
+            <p>Returns the current system status</p>
+            <p>Response: <code>{"status": "ok", "timestamp": "..."}</code></p>
+        </div>
+        
+        <div class="endpoint">
+            <h3>GET /api/config</h3>
+            <p>Returns the current configuration (public fields only)</p>
+        </div>
+    </div>
+</body>
+</html>

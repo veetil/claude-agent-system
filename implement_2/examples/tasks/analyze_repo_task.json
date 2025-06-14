@@ -1,0 +1,30 @@
+{
+  "prompt": "Analyze the repository and create a comprehensive documentation including README.md, API.md, and a metrics.json file with code statistics",
+  "system_prompt": "You are a documentation expert. Create clear, well-structured documentation.",
+  "input_repos": [
+    {
+      "github": "https://github.com/Polkm/learn",
+      "dest_path": "repo"
+    }
+  ],
+  "output_files": [
+    {
+      "name": "README.md",
+      "src_path": "README.md",
+      "dest_path": "./outputs"
+    },
+    {
+      "name": "API.md",
+      "src_path": "API.md",
+      "dest_path": "./outputs"
+    },
+    {
+      "name": "metrics.json",
+      "src_path": "metrics.json",
+      "dest_path": "./outputs"
+    }
+  ],
+  "workspace_id": "doc_generator",
+  "timeout": 180,
+  "cleanup": false
+}

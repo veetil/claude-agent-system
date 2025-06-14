@@ -1,0 +1,51 @@
+{
+  "prompt": "You have access to: 1) A configuration file (config/app_config.json), 2) A templates folder with HTML templates, 3) The learn repository. Create: 1) A Python web app (app.py) that uses the config and serves the templates, 2) A requirements.txt file, 3) A deployment folder with Dockerfile and docker-compose.yml, 4) A comprehensive README.md documenting everything.",
+  "system_prompt": "You are an expert full-stack developer. Create production-ready code with proper error handling, documentation, and best practices.",
+  "input_files": [
+    {
+      "name": "app_config.json",
+      "src_path": "./examples/input_files/app_config.json",
+      "dest_path": "config"
+    }
+  ],
+  "input_folders": [
+    {
+      "name": "templates",
+      "src_path": "./examples/input_files/templates",
+      "dest_path": "templates"
+    }
+  ],
+  "input_repos": [
+    {
+      "github": "https://github.com/Polkm/learn",
+      "dest_path": "learn_repo"
+    }
+  ],
+  "output_files": [
+    {
+      "name": "app.py",
+      "src_path": "app.py",
+      "dest_path": "./outputs"
+    },
+    {
+      "name": "requirements.txt",
+      "src_path": "requirements.txt",
+      "dest_path": "./outputs"
+    },
+    {
+      "name": "README.md",
+      "src_path": "README.md",
+      "dest_path": "./outputs"
+    }
+  ],
+  "output_folders": [
+    {
+      "name": "deployment",
+      "src_path": "deployment",
+      "dest_path": "./outputs"
+    }
+  ],
+  "workspace_id": "full_feature_demo",
+  "timeout": 300,
+  "cleanup": false
+}

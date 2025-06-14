@@ -1,0 +1,36 @@
+{
+  "prompt": "Process the CSV data files in the data folder: 1) Combine all CSV files into merged.csv, 2) Create summary_stats.json with statistics for each column, 3) Generate a visualization script visualize.py",
+  "input_folders": [
+    {
+      "name": "sample_data",
+      "src_path": "./examples/sample_data",
+      "dest_path": "data"
+    }
+  ],
+  "output_files": [
+    {
+      "name": "merged.csv",
+      "src_path": "merged.csv",
+      "dest_path": "./outputs"
+    },
+    {
+      "name": "summary_stats.json",
+      "src_path": "summary_stats.json",
+      "dest_path": "./outputs"
+    },
+    {
+      "name": "visualize.py",
+      "src_path": "visualize.py",
+      "dest_path": "./outputs"
+    }
+  ],
+  "output_folders": [
+    {
+      "name": "processed_data",
+      "src_path": "processed",
+      "dest_path": "./outputs"
+    }
+  ],
+  "timeout": 120,
+  "cleanup": true
+}

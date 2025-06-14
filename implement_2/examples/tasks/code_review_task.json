@@ -1,0 +1,33 @@
+{
+  "prompt": "Review the Python code in the 'src' folder. Create: 1) review_report.md with detailed code review findings including security, performance, and best practices, 2) refactored/ folder with improved versions of problematic files, 3) improvements.json with a structured list of all suggestions",
+  "system_prompt": "You are a senior software engineer conducting a thorough code review. Focus on security vulnerabilities, performance issues, code smells, and Python best practices.",
+  "input_folders": [
+    {
+      "name": "source_code",
+      "src_path": "./src/claude_multi_agent",
+      "dest_path": "src"
+    }
+  ],
+  "output_files": [
+    {
+      "name": "review_report.md",
+      "src_path": "review_report.md",
+      "dest_path": "./outputs"
+    },
+    {
+      "name": "improvements.json",
+      "src_path": "improvements.json",
+      "dest_path": "./outputs"
+    }
+  ],
+  "output_folders": [
+    {
+      "name": "refactored",
+      "src_path": "refactored",
+      "dest_path": "./outputs"
+    }
+  ],
+  "workspace_id": "code_reviewer",
+  "timeout": 180,
+  "cleanup": true
+}

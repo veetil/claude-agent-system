@@ -1,0 +1,12 @@
+{
+  "prompt": "Create a Python script that generates a fibonacci sequence up to n=10 and saves it to fibonacci.py",
+  "output_files": [
+    {
+      "name": "fibonacci.py",
+      "src_path": "fibonacci.py",
+      "dest_path": "./outputs"
+    }
+  ],
+  "timeout": 60,
+  "cleanup": true
+}
