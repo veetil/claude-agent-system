@@ -21,6 +21,9 @@ from .shell.executor import ShellExecutor
 # Workspace manager
 from .workspace.manager import WorkspaceManager
 
+# Agent runner
+from .agent_runner import run_agent_with_io, verify_outputs, AgentRunResult
+
 # Utilities
 from .utils.logging import setup_logging, get_logger
 from .utils.retry import retry_with_backoff
@@ -43,6 +46,9 @@ __all__ = [
     
     # Workspace manager
     "WorkspaceManager",
+    
+    # Agent runner
+    "run_agent_with_io", "verify_outputs", "AgentRunResult",
     
     # Utilities
     "setup_logging", "get_logger", "retry_with_backoff", "RobustJSONParser",

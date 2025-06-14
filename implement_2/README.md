@@ -34,6 +34,27 @@ python examples/run_agent.py "Explain quantum computing" --system "You are a phy
 python examples/run_agent.py "Continue our discussion" --workspace /tmp/my_session
 ```
 
+### Agent with Input/Output Files
+
+```python
+from claude_multi_agent import run_agent_with_io
+
+# Run agent with inputs and get outputs back
+result = run_agent_with_io(
+    prompt="Analyze the code and create a summary",
+    input_folders=[
+        {"name": "myproject", "src_path": "./myproject", "dest_path": "code"}
+    ],
+    output_files=[
+        {"name": "summary.md", "src_path": "summary.md", "dest_path": "./results/"}
+    ]
+)
+
+if result.success:
+    print(f"Summary created at: {result.files_created[0]['dest_path']}")
+    print(f"Cost: ${result.cost_usd:.4f}")
+```
+
 ### Session Management Example
 
 ```python
@@ -92,11 +113,13 @@ print(response2["result"])  # "42"
 - Claude CLI integration via interactive shell
 - Session management with directory-based isolation
 - Workspace creation with file/folder/git repo imports
+- Agent I/O with automatic file transfer
 - Parallel agent execution (up to 5x speedup)
+- Autonomous file creation (with --dangerously-skip-permissions)
 - Robust error handling and retry logic
 - JSON response parsing
 - Comprehensive logging and configuration
-- Example scripts for common use cases
+- Production-ready agent runner with input/output management
 
 ### 🚧 Coming Next (Step 3-4)
 - Full Agent class with lifecycle management
@@ -114,6 +137,9 @@ See the `examples/` directory for:
 - `simple_parallel.py` - Basic parallel agent execution
 - `parallel_agents.py` - Advanced parallel execution with metrics
 - `parallel_timing_demo.py` - Performance comparison sequential vs parallel
+- `quick_io_test.py` - Test agent input/output file handling
+- `simple_io_example.py` - Simple examples of agent I/O patterns
+- `production_agent_example.py` - Production-ready agent with full I/O
 - `README.md` - Detailed documentation
 
 ## Development
