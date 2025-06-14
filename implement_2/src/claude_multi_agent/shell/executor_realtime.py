@@ -43,9 +43,14 @@ class RealtimeShellExecutor:
         prompt: str, 
         session_id: Optional[str] = None,
         output_format: str = "json",
-        debug: bool = False
+        debug: bool = False,
+        streaming: bool = False
     ) -> List[str]:
         """Build Claude CLI command arguments"""
+        # Use stream-json format for real-time output
+        if streaming:
+            output_format = "stream-json"
+        
         args = [
             "claude", 
             "--dangerously-skip-permissions",
@@ -55,6 +60,7 @@ class RealtimeShellExecutor:
         
         if debug:
             args.append("--debug")
+            args.append("--verbose")  # Add verbose for more output
             
         if session_id:
             args.extend(["-r", session_id])
@@ -64,48 +70,114 @@ class RealtimeShellExecutor:
     def _read_stream(self, stream, stream_name: str, output_queue: queue.Queue, debug: bool):
         """Read from a stream and log/queue output in real-time
         
-        Note: Claude CLI processes internally and returns results all at once.
-        The [DEBUG] messages we see are status updates, not actual content streaming.
+        With stream-json format, we get actual streaming JSON objects.
         """
         try:
+            current_json = []
+            brace_count = 0
+            in_json = False
+            
             for line in iter(stream.readline, ''):
                 if line:
                     line = line.rstrip()
                     output_queue.put(line)
+                    
                     if debug and line.strip():
-                        # Log with timestamp for better debugging
                         timestamp = time.strftime("%H:%M:%S")
-                        logger.info(f"[{timestamp}] [{stream_name}] {line}")
+                        
+                        # Check if this is the start of a JSON object
+                        if line.strip().startswith('{'):
+                            in_json = True
+                            current_json = [line]
+                            brace_count = line.count('{') - line.count('}')
+                            logger.info(f"[{timestamp}] [JSON-START] {line}")
+                        elif in_json:
+                            current_json.append(line)
+                            brace_count += line.count('{') - line.count('}')
+                            
+                            if brace_count == 0:
+                                # Complete JSON object
+                                try:
+                                    json_obj = json.loads('\n'.join(current_json))
+                                    if 'type' in json_obj:
+                                        if json_obj['type'] == 'text':
+                                            logger.info(f"[{timestamp}] [CONTENT] {json_obj.get('text', '')[:100]}...")
+                                        elif json_obj['type'] == 'tool_use':
+                                            logger.info(f"[{timestamp}] [TOOL] {json_obj.get('name', 'unknown')}")
+                                        elif json_obj['type'] == 'result':
+                                            logger.info(f"[{timestamp}] [RESULT] Success={not json_obj.get('is_error', False)}")
+                                        else:
+                                            logger.info(f"[{timestamp}] [JSON-{json_obj['type'].upper()}]")
+                                except:
+                                    logger.info(f"[{timestamp}] [JSON-END]")
+                                in_json = False
+                                current_json = []
+                        else:
+                            # Regular output
+                            logger.info(f"[{timestamp}] [{stream_name}] {line}")
         except Exception as e:
             logger.error(f"Error reading {stream_name}: {e}")
         finally:
             stream.close()
     
-    def _sanitize_output(self, output: str) -> str:
-        """Remove shell artifacts and find JSON content"""
+    def _extract_json_objects(self, output: str) -> List[str]:
+        """Extract all JSON objects from output"""
+        json_objects = []
         lines = output.strip().split('\n')
-        
-        # Find first line that starts with '{'
-        json_start_idx = None
-        for i, line in enumerate(lines):
-            if line.strip().startswith('{'):
-                json_start_idx = i
-                break
-                
-        if json_start_idx is None:
-            raise ExecutionError("No JSON found in output")
-            
-        # Extract JSON lines using brace counting
-        json_lines = []
+        current_json = []
         brace_count = 0
+        in_json = False
         
-        for line in lines[json_start_idx:]:
-            json_lines.append(line)
-            brace_count += line.count('{') - line.count('}')
-            if brace_count == 0:
-                break
+        for line in lines:
+            if line.strip().startswith('{'):
+                in_json = True
+                current_json = [line]
+                brace_count = line.count('{') - line.count('}')
+            elif in_json:
+                current_json.append(line)
+                brace_count += line.count('{') - line.count('}')
                 
-        return '\n'.join(json_lines)
+            if in_json and brace_count == 0:
+                json_objects.append('\n'.join(current_json))
+                current_json = []
+                in_json = False
+                
+        return json_objects
+    
+    def _sanitize_output(self, output: str, streaming: bool = False) -> str:
+        """Extract the final JSON from output"""
+        if streaming:
+            # With stream-json, we get multiple JSON objects
+            # We need the last one for the final result
+            json_objects = self._extract_json_objects(output)
+            if not json_objects:
+                raise ExecutionError("No JSON found in output")
+            return json_objects[-1]  # Return the last JSON object
+        else:
+            # Standard JSON output - find and extract single JSON
+            lines = output.strip().split('\n')
+            
+            # Find first line that starts with '{'
+            json_start_idx = None
+            for i, line in enumerate(lines):
+                if line.strip().startswith('{'):
+                    json_start_idx = i
+                    break
+                    
+            if json_start_idx is None:
+                raise ExecutionError("No JSON found in output")
+                
+            # Extract JSON lines using brace counting
+            json_lines = []
+            brace_count = 0
+            
+            for line in lines[json_start_idx:]:
+                json_lines.append(line)
+                brace_count += line.count('{') - line.count('}')
+                if brace_count == 0:
+                    break
+                    
+            return '\n'.join(json_lines)
     
     def _handle_error(self, stderr: str, session_id: Optional[str]):
         """Parse and handle specific errors from Claude CLI"""
@@ -141,8 +213,11 @@ class RealtimeShellExecutor:
         Returns:
             Parsed JSON response with session_id and result
         """
+        # Use streaming when debug is enabled for real-time output
+        streaming = debug
+        
         # Build command
-        args = self._build_claude_command(prompt, session_id, debug=debug)
+        args = self._build_claude_command(prompt, session_id, debug=debug, streaming=streaming)
         shell_cmd = " ".join(shlex.quote(arg) for arg in args)
         
         # Set working directory
@@ -219,7 +294,7 @@ class RealtimeShellExecutor:
                 self._handle_error(full_stderr, session_id)
                 
             # Parse response
-            clean_output = self._sanitize_output(full_stdout)
+            clean_output = self._sanitize_output(full_stdout, streaming=streaming)
             response = json.loads(clean_output)
             
             logger.debug(f"Response: {response}")

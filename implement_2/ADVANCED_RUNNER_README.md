@@ -259,11 +259,25 @@ When debug mode is enabled, you'll see:
 - Detailed execution logs
 - Any error messages or warnings from the CLI
 
-When real-time debug is enabled, you'll see:
-- Live streaming of [DEBUG] status messages as they occur
-- Timestamped debug status updates (e.g., "Stream started - received first chunk")
-- Immediate feedback when Claude starts processing
-- Note: Claude CLI processes internally and returns results all at once, so actual content is not streamed
+When real-time debug is enabled (using --output-format stream-json), you'll see:
+- Live streaming of actual content as Claude generates it
+- Timestamped JSON objects showing:
+  - System initialization with session ID
+  - Assistant's text responses as they're generated
+  - Tool usage (Write, Edit, Bash, etc.) in real-time
+  - Tool results immediately after execution
+  - Final result with cost and usage statistics
+- Complete visibility into Claude's thought process and actions
+
+Example real-time output:
+```
+[19:44:29] [JSON-START] {"type":"system","subtype":"init","session_id":"1c752a03-7887-490e-8bc5-4dd1adae2b93"...}
+[19:44:33] [CONTENT] I'll create a simple hello.txt file with the text 'Debug test'.
+[19:44:34] [TOOL] Write
+[19:44:34] [JSON-START] {"type":"user","message":{"role":"user","content":[{"tool_use_id":"toolu_01CimgGaQ9FhySuBXkEbSN79","type":"tool_result","content":"File created successfully...
+[19:44:37] [CONTENT] ✓ Created hello.txt
+[19:44:37] [RESULT] Success=True
+```
 
 ### Batch Processing
 Create multiple task JSON files and process them:
